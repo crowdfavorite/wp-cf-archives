@@ -427,8 +427,8 @@ function cfar_setting($option) {
 function cfar_admin_menu() {
 	if (current_user_can('manage_options')) {
 		add_options_page(
-			__('WP Archives', 'cf-archives')
-			, __('WP Archives', 'cf-archives')
+			__('CF Archives', 'cf-archives')
+			, __('CF Archives', 'cf-archives')
 			, 10
 			, basename(__FILE__)
 			, 'cfar_settings_form'

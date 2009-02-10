@@ -493,82 +493,80 @@ function cfar_settings_form() {
 	<div id="archive_rebuilt" class="updated fade" style="display: none;">
 		<p>'.__('Archive Rebuilt.', 'cf-archives').'</p>
 	</div>
-	<div id="wpbody">
-		<div class="wrap">
-			<h2>'.__('WP Archives', 'cf-archives').'</h2>
-			<form id="cfar_settings_form" name="cfar_settings_form" action="'.get_bloginfo('wpurl').'/wp-admin/options-general.php" method="post">
-				<input type="hidden" name="cf_action" value="cfar_update_settings" />
-				<table class="widefat" style="width: 400px; margin-top: 10px;">
-					<thead>
-						<tr>
-							<th scope="col">'.__('Setting','cf-archives').'</th>
-							<th scope="col" width="100px" style="text-align:center;">'.__('Value','cf-archives').'</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td style="vertical-align: middle;">
-								<p>	
-									'.__('Show Post Preview: ','cf-archives').'
-								</p>
-								<p>
-									'.__('When set to "Yes," this will show a link to show/hide the preview for each post.','cf-archives').'								
-								</p>
-							</td>
-							<td style="text-align: center; vertical-align: middle;">
-								<select name="cfar_settings[excerpt]">
-									<option value="yes"'.$excerpt_yes.'>'.__('Yes','cf-archives').'</option>
-									<option value="no"'.$excerpt_no.'>'.__('No','cf-archives').'</option>
-								</select>
-							</td>
-						</tr>
-						<tr>
-							<td style="vertical-align: middle;">
-								<p>
-									'.__('Show Year Header: ','cf-archives').'
-								</p>
-								<p>
-									'.__('When set to "Yes," this will show the year header for each year.','cf-archives').'								
-								</p>
-							</td>
-							<td style="text-align: center; vertical-align: middle;">
-								<select name="cfar_settings[showyear]">
-									<option value="yes"'.$showyear_yes.'>'.__('Yes','cf-archives').'</option>
-									<option value="no"'.$showyear_no.'>'.__('No','cf-archives').'</option>
-								</select>
-							</td>
-						</tr>
-						<tr>
-							<td style="vertical-align: middle;">
-								<p>
-									'.__('Display year/month hide links: ','cf-archives').'
-								</p>
-								<p>
-									'.__('When set to "Yes," this will hide the posts until the user clicks on a "Show" link next to the year or month.','cf-archives').'
-								</p>
-							</td>
-							<td style="text-align: center; vertical-align: middle;">
-								<select name="cfar_settings[yearhide]">
-									<option value="yes"'.$yearhide_yes.'>'.__('Yes','cf-archives').'</option>
-									<option value="no"'.$yearhide_no.'>'.__('No','cf-archives').'</option>
-								</select>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-				<p class="submit" style="border-top: none;">
-					<input type="submit" name="submit" value="'.__('Save Settings', 'cf-archives').'" />
-				</p>
-			</form>
-			<form id="cfar_settings_form2" name="cfar_settings_form2" action="" method="post">
-				<p class="submit" style="border-top: none;">
-					<input type="submit" name="submit" value="'.__('Rebuild Archive', 'cf-archives').'" />
-				</p>
-				<div id="index-status">
-					<p></p>
-				</div>
-			</form>
-		</div>
+	<div class="wrap">
+		<div class="icon32" id="icon-options-general"><br/></div><h2>'.__('CF Archives', 'cf-archives').'</h2>
+		<form id="cfar_settings_form" name="cfar_settings_form" action="'.get_bloginfo('wpurl').'/wp-admin/options-general.php" method="post">
+			<input type="hidden" name="cf_action" value="cfar_update_settings" />
+			<table class="widefat" style="width: 400px; margin-top: 10px;">
+				<thead>
+					<tr>
+						<th scope="col">'.__('Setting','cf-archives').'</th>
+						<th scope="col" width="100px" style="text-align:center;">'.__('Value','cf-archives').'</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td style="vertical-align: middle;">
+							<p>	
+								'.__('Show Post Preview: ','cf-archives').'
+							</p>
+							<p>
+								'.__('When set to "Yes," this will show a link to show/hide the preview for each post.','cf-archives').'								
+							</p>
+						</td>
+						<td style="text-align: center; vertical-align: middle;">
+							<select name="cfar_settings[excerpt]">
+								<option value="yes"'.$excerpt_yes.'>'.__('Yes','cf-archives').'</option>
+								<option value="no"'.$excerpt_no.'>'.__('No','cf-archives').'</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td style="vertical-align: middle;">
+							<p>
+								'.__('Show Year Header: ','cf-archives').'
+							</p>
+							<p>
+								'.__('When set to "Yes," this will show the year header for each year.','cf-archives').'								
+							</p>
+						</td>
+						<td style="text-align: center; vertical-align: middle;">
+							<select name="cfar_settings[showyear]">
+								<option value="yes"'.$showyear_yes.'>'.__('Yes','cf-archives').'</option>
+								<option value="no"'.$showyear_no.'>'.__('No','cf-archives').'</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td style="vertical-align: middle;">
+							<p>
+								'.__('Display year/month hide links: ','cf-archives').'
+							</p>
+							<p>
+								'.__('When set to "Yes," this will hide the posts until the user clicks on a "Show" link next to the year or month.','cf-archives').'
+							</p>
+						</td>
+						<td style="text-align: center; vertical-align: middle;">
+							<select name="cfar_settings[yearhide]">
+								<option value="yes"'.$yearhide_yes.'>'.__('Yes','cf-archives').'</option>
+								<option value="no"'.$yearhide_no.'>'.__('No','cf-archives').'</option>
+							</select>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<p class="submit" style="border-top: none;">
+				<input type="submit" name="submit" value="'.__('Save Settings', 'cf-archives').'" />
+			</p>
+		</form>
+		<form id="cfar_settings_form2" name="cfar_settings_form2" action="" method="post">
+			<p class="submit" style="border-top: none;">
+				<input type="submit" name="submit" value="'.__('Rebuild Archive', 'cf-archives').'" />
+			</p>
+			<div id="index-status">
+				<p></p>
+			</div>
+		</form>
 	</div>
 	');
 }

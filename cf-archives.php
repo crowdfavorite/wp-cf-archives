@@ -641,6 +641,7 @@ function cfar_get_yearly_list($args=null) {
 		, 'after_monthlist' => '</ul></li>'
 		, 'before_month' => '<li>'
 		, 'after_month' => '</li>'
+		, 'month_php_format' => 'M'
 		, 'category' => ''
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
@@ -653,7 +654,7 @@ function cfar_get_yearly_list($args=null) {
 		$return .= $before_year.'<a class="year-link" href="#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year.$before_monthlist;
 		foreach($months as $month => $count) {
 			$return .= $before_month;
-			$month_name = date('M', mktime(0,0,0,$month,1,$yearoutput));
+			$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
 			if($category != 0) {
 				$count = 0;
 				$post_archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");

@@ -1025,8 +1025,8 @@ function cfar_widget_control() {
 
 function cfar_widget_init() {
 	$widget_ops = array('classname' => 'widget_cfar_archive', 'description' => __('Widget for linking to the custom archives','cf-archives'));
-	wp_register_sidebar_widget('cf-archives',__('WP Archives','cf-archives'),'cfar_widget',$widget_ops);
-	wp_register_widget_control('cf-archives',__('WP Archives','cf-archives'),'cfar_widget_control');
+	wp_register_sidebar_widget('cf-archives',__('CF Archives','cf-archives'),'cfar_widget',$widget_ops);
+	wp_register_widget_control('cf-archives',__('CF Archives','cf-archives'),'cfar_widget_control');
 }
 add_action('init','cfar_widget_init');
 

@@ -316,7 +316,18 @@ function cfar_add_archive($post_id) {
 			array_push($category_list, $category->cat_ID);
 		}
 
-		$insert = array($save_post->post->post_date.'--'.$save_post->post->ID => array('id' => $save_post->post->ID,'title' => $save_post->post->post_title,'author' => $save_post->post->post_author,'post_date' => $save_post->post->post_date,'excerpt' => $excerpt,'guid' => $save_post->post->guid,'categories' => $category_list));
+		$insert = array(
+			$save_post->post->post_date.'--'.$save_post->post->ID => array(
+				'id' => $save_post->post->ID,
+				'title' => $save_post->post->post_title,
+				'author' => $save_post->post->post_author,
+				'post_date' => $save_post->post->post_date,
+				'excerpt' => $excerpt,
+				'guid' => $save_post->post->guid,
+				'categories' => $category_list,
+				'status' => $save_post->post->post_status,
+			)
+		);
 		if (!is_array($start)) {
 			$query = "INSERT INTO ".CF_ARCHIVETABLE." (`option_id` ,`blog_id` ,`option_name` ,`option_value` ,`autoload`)VALUES (NULL , '0', '".$archive_date."', '".$wpdb->escape(serialize($insert))."', 'no');";
 			$wpdb->query($query);
@@ -868,6 +879,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 			$posts = array_reverse($posts,true);
 		}
 		foreach($posts as $post) {
+			if ($post['status'] != 'publish') { break; }
 			if (htmlspecialchars($settings['excerpt']) == 'yes') {
 				if ($post_show != '') {
 					$post_show_text = $post_show;

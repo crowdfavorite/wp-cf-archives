@@ -460,6 +460,10 @@ add_filter('plugin_action_links', 'cfar_plugin_action_links', 10, 2);
 
 function cfar_settings_form() {
 	global $wpdb;
+	
+	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$yearlist = maybe_unserialize($archives[0]->option_value);
+	
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	if (htmlspecialchars($settings['excerpt']) == 'yes') {
 		$excerpt_yes = ' selected=selected';
@@ -508,6 +512,7 @@ function cfar_settings_form() {
 		<div class="icon32" id="icon-options-general"><br/></div><h2>'.__('CF Archives', 'cf-archives').'</h2>
 		<form id="cfar_settings_form" name="cfar_settings_form" action="'.get_bloginfo('wpurl').'/wp-admin/options-general.php" method="post">
 			<input type="hidden" name="cf_action" value="cfar_update_settings" />
+			<div style="float: left; margin: 20px;">
 			<table class="widefat" style="width: 400px; margin-top: 10px;">
 				<thead>
 					<tr>
@@ -566,6 +571,38 @@ function cfar_settings_form() {
 					</tr>
 				</tbody>
 			</table>
+			</div>
+			<div style="float: left; margin: 20px;">
+			<table class="widefat" style="width: 200px; margin-top: 10px; float: left;">
+				<thead>
+					<tr>
+						<th scope="col">'.__('Year','cf-archives').'</th>
+						<th scope="col" style="text-align:center;">'.__('No Display','cf-archives').'</th>
+					</tr>
+				</thead>
+				');
+				foreach($yearlist as $year => $months) {
+					$value = '';
+					$yearoutput = str_replace('_','',$year);
+					
+					if (in_array($year,$settings['exclude_years'])) {
+						$value = 'checked=checked';
+					}
+					print('
+					<tr>
+						<td>
+							'.$yearoutput.'
+						</td>
+						<td style="text-align:center;">
+							<input type="checkbox" name="cfar_settings[year_exclude]['.$yearoutput.']"'.$value.' />
+						</td>
+					</tr>
+					');
+				}
+				print('
+			</table>
+			</div>
+			<div class="clear"></div>
 			<p class="submit" style="border-top: none;">
 				<input type="submit" name="submit" value="'.__('Save Settings', 'cf-archives').'" />
 			</p>
@@ -586,7 +623,20 @@ function cfar_save_settings($settings) {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
-	update_option('cf_archives', array('excerpt' => $settings['excerpt'],'showyear' => $settings['showyear'],'yearhide' => $settings['yearhide']));
+	$exclude_years = array();
+	
+	if (is_array($settings['year_exclude'])) {
+		foreach ($settings['year_exclude'] as $year => $value) {
+			$exclude_years[] = $year;
+		}
+	}
+
+	update_option('cf_archives', array(
+		'excerpt' => $settings['excerpt'],
+		'showyear' => $settings['showyear'],
+		'yearhide' => $settings['yearhide'],
+		'exclude_years' => $exclude_years,
+	));
 }
 
 function cfar_trim_excerpt($excerpt,$content,$length = 250) {
@@ -607,7 +657,16 @@ function cfar_trim_excerpt($excerpt,$content,$length = 250) {
 function cfar_get_head_list($args=null) {
 	global $wpdb;
 	
-	$defaults = array('before'=>'<ul>','after'=>'</ul>','before_year'=>'<li>','after_year'=>'</li>','before_monthlist'=>'<ul>','after_monthlist'=>'</ul>','before_month'=>'<li>','after_month'=>'</li>');
+	$defaults = array(
+		'before'=>'<ul>',
+		'after'=>'</ul>',
+		'before_year'=>'<li>',
+		'after_year'=>'</li>',
+		'before_monthlist'=>'<ul>',
+		'after_monthlist'=>'</ul>',
+		'before_month'=>'<li>',
+		'after_month'=>'</li>'
+	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
 	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
@@ -654,39 +713,53 @@ function cfar_get_yearly_list($args=null) {
 		, 'after_month' => '</li>'
 		, 'month_php_format' => 'M'
 		, 'category' => ''
+		, 'exclude_years' => ''
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
-
+	$settings = maybe_unserialize(get_option('cf_archives'));
+	
+	if (!is_array($exclude_years)) {
+		$exclude_years = $settings['exclude_years'];
+	}
+	
 	$return .= $before;
 	foreach($yearlist as $year => $months) {
+		$yearcount = 0;
+		$yearreturn = '';
 		$yearoutput = str_replace('_','',$year);
-		$return .= $before_year.'<a class="year-link" href="#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year.$before_monthlist;
-		foreach($months as $month => $count) {
-			$return .= $before_month;
-			$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
-			if($category != 0) {
-				$count = 0;
-				$post_archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
-				$posts = maybe_unserialize($post_archives[0]->option_value);
-				if (is_array($posts)) {
-					foreach($posts as $post) {
-						if (is_array($post['categories']) && in_array($category,$post['categories'])) {
-							$count++;
+		if (!in_array($yearoutput, $exclude_years)) {
+			$yearreturn .= $before_year.'<a class="year-link" href="#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year.$before_monthlist;
+			foreach($months as $month => $count) {
+				$yearreturn .= $before_month;
+				$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
+				if($category != 0) {
+					$count = 0;
+					$post_archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
+					$posts = maybe_unserialize($post_archives[0]->option_value);
+					if (is_array($posts)) {
+						foreach($posts as $post) {
+							if (is_array($post['categories']) && in_array($category,$post['categories'])) {
+								$count++;
+							}
 						}
 					}
 				}
+				if ($count > 0) {
+					$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
+				}
+				else {
+					$yearreturn .= '<span class="month-nolink">'.$month_name.'</span>';
+				}
+				$yearreturn .= $after_month;
+				$yearcount += $count;
 			}
-			if ($count > 0) {
-				$return .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
-			}
-			else {
-				$return .= '<span class="month-nolink">'.$month_name.'</span>';
-			}
-			$return .= $after_month;
+			$yearreturn .= $after_monthlist.$after_year;
 		}
-		$return .= $after_monthlist.$after_year;
+		if ($yearcount > 0) {
+			$return .= $yearreturn;
+		}
 	}
 	$return .= $after;
 	return $return;
@@ -710,6 +783,7 @@ function cfar_archive_list($args = null) {
 		, 'show_excerpt' => ''
 		, 'show_year_header' => ''
 		, 'show_month_hide' => ''
+		, 'exclude_years' => ''
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
@@ -727,10 +801,16 @@ function cfar_archive_list($args = null) {
 function cfar_year_archive($yearinput='',$args = null) {
 	global $wpdb;
 	$settings = maybe_unserialize(get_option('cf_archives'));
-	$defaults = array('show_year_header' => ''
-				);
+	$defaults = array(
+		'show_year_header' => ''
+		, 'exclude_years' => ''
+	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
+	$settings = maybe_unserialize(get_option('cf_archives'));
 	
+	if (!is_array($exclude_years)) {
+		$exclude_years = $settings['exclude_years'];
+	}
 	if ($show_year_header != '') {
 		$settings['showyear'] = $show_year_header;
 	}
@@ -742,22 +822,24 @@ function cfar_year_archive($yearinput='',$args = null) {
 		foreach($yearlist as $year => $months) {
 			$yearcount = 0;
 			$yearoutput = str_replace('_','',$year);
-			if ($yearoutput == $yearinput ) {
-				krsort($months);
-				foreach($months as $month => $count) {
-					if ($count > 0) {
-						$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
-						$yearcount++;
+			if (!in_array($yearoutput, $exclude_years)) {
+				if ($yearoutput == $yearinput ) {
+					krsort($months);
+					foreach($months as $month => $count) {
+						if ($count > 0) {
+							$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
+							$yearcount++;
+						}
 					}
 				}
-			}
-			if ($yearcount > 0) {
-				if (htmlspecialchars($settings['showyear']) == 'yes') {
-					print('<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>');
-					print($print);
-				}
-				else {
-					print('<div id="_'.$yearoutput.'">'.$print.'</div>');
+				if ($yearcount > 0) {
+					if (htmlspecialchars($settings['showyear']) == 'yes') {
+						print('<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>');
+						print($print);
+					}
+					else {
+						print('<div id="_'.$yearoutput.'">'.$print.'</div>');
+					}
 				}
 			}
 		}

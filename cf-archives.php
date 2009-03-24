@@ -489,6 +489,9 @@ function cfar_settings_form() {
 		$yearhide_yes = '';
 		$yearhide_no = ' selected=selected';
 	}
+	if (!is_array($settings['exclude_years'])) {
+		$settings['exclude_years'] = array();
+	}
 	if ( isset($_GET['cf_message']) ) {
 		switch($_GET['cf_message']) {
 			case 'archive_rebuilt':
@@ -713,14 +716,14 @@ function cfar_get_yearly_list($args=null) {
 		, 'after_month' => '</li>'
 		, 'month_php_format' => 'M'
 		, 'category' => ''
-		, 'exclude_years' => ''
+		, 'exclude_years' => array()
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	
-	if (!is_array($exclude_years)) {
+	if (empty($exclude_years) && is_array($settings['exclude_years'])) {
 		$exclude_years = $settings['exclude_years'];
 	}
 	
@@ -803,12 +806,12 @@ function cfar_year_archive($yearinput='',$args = null) {
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$defaults = array(
 		'show_year_header' => ''
-		, 'exclude_years' => ''
+		, 'exclude_years' => array()
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	
-	if (!is_array($exclude_years)) {
+	if (empty($exclude_years) && is_array($settings['exclude_years'])) {
 		$exclude_years = $settings['exclude_years'];
 	}
 	if ($show_year_header != '') {

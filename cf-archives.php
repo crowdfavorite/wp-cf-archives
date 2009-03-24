@@ -964,7 +964,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 			$posts = array_reverse($posts,true);
 		}
 		foreach($posts as $post) {
-			if ($post['status'] != 'publish') { break; }
+			if ($post['status'] != 'publish') { continue; }
 			if (htmlspecialchars($settings['excerpt']) == 'yes') {
 				if ($post_show != '') {
 					$post_show_text = $post_show;

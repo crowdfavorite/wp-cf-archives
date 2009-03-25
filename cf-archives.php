@@ -295,10 +295,15 @@ function cfar_get_posts_count() {
 
 function cfar_add_archive($post_id) {
 	global $wpdb;
+	
 	$save_post = new WP_Query('p='.$post_id);
 	$orig_post = $post;
 	while($save_post->have_posts()) {
 		$save_post->the_post();
+		
+		// supply a filter to allow posts to be excluded from archiving
+		if(!apply_filters('cfar_do_archive',true, $save_post->post)) { return false; }
+		
 		if ($save_post->post->post_type == 'revision' || $save_post->post->post_status == 'draft') { break; }
 		$year = date('Y',strtotime($save_post->post->post_date));
 		$month = date('m',strtotime($save_post->post->post_date));

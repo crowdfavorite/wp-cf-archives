@@ -989,41 +989,68 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 			else {
 				$showexcerpt = '';
 			}
-			if ($category != 0) {
+			$link = '';
+			$title = '';
+			$author = '';
+			$postdate = '';
+			$excerpt = '';
+			
+			if ($category != 0) {				
 				if (is_array($post['categories']) && in_array($category,$post['categories'])) {
 					if ($print_month_content == 'show') {
-						$author_info = get_userdata($post['author']);
-						$content .= '<li>';
-						$content .= '<a href="'.get_permalink($post['id']).'">'.$post['title'].'</a>'.' | '.date('M j, Y',strtotime($post['post_date']));
-						if ($show_author == 'yes') {
-							$content .= ' | '.__('By: ','cf-archives').$author_info->display_name;
-						}
-						$content .= $showexcerpt;
-						if (htmlspecialchars($settings['excerpt']) == 'yes') {
-							$content .= '<br /><div id="post-'.$post['id'].'" class="postexcerpt" style="display: none;">'.$post['excerpt'].'</div>';
-						}
-						$content .= '</li>';
 						$category_ID = $post['categories'];
+						$link = get_permalink($post['id']);
+						$title = $post['title'];
+						$author = $author_info->display_name;
+						$postdate = date('M j, Y',strtotime($post['post_date']));
+						if (htmlspecialchars($settings['excerpt']) == 'yes') {
+							$excerpt = '<br /><div id="post-'.$post['id'].'" class="postexcerpt" style="display: none;">'.$post['excerpt'].'</div>';
+						}
 					}
 					$post_count++;
 				}
 			}
 			else {
 				if ($print_month_content == 'show') {
-					$author_info = get_userdata($post['author']);
-					$content .= '<li>';
-					$content .= '<a href="'.get_permalink($post['id']).'">'.$post['title'].'</a>'.' | '.date('M j, Y',strtotime($post['post_date']));
-					if ($show_author == 'yes') {
-						$content .= ' | '.__('By: ','wp-archives').$author_info->display_name;
-					}
-					$content .= $showexcerpt;
+					$link = get_permalink($post['id']);
+					$title = $post['title'];
+					$author = $author_info->display_name;
+					$postdate = date('M j, Y',strtotime($post['post_date']));
 					if (htmlspecialchars($settings['excerpt']) == 'yes') {
-						$content .= '<br /><div id="post-'.$post['id'].'" class="postexcerpt" style="display: none;">'.$post['excerpt'].'</div>';
-					}
-					$content .= '</li>';
+						$excerpt = '<br /><div id="post-'.$post['id'].'" class="postexcerpt" style="display: none;">'.$post['excerpt'].'</div>';
+					}					
 				}
 				$post_count++;
 			}
+			
+			if ($print_month_content == 'show') {
+				$authoroutput = '';
+				$dateoutput = '';
+				
+				$post_settings = array(
+					'id' => $post['id'],
+					'title' => $title,
+					'link' => $link,
+					'author' => $author,
+					'postdate' => $postdate,
+					'showlink' => $showexcerpt,
+					'excerpt' => $excerpt,
+					'category' => $category,
+				);
+				
+				$post_settings = apply_filters('cfar_display_post', $post_settings);
+				
+				if (!empty($post_settings['title']) && !empty($post_settings['link'])) {
+					if ($show_author == 'yes' && !empty($post_settings['author'])) {
+						$authoroutput = ' | '.__('By: ','cf-archives').$post_settings['author'];
+					}
+					if (!empty($post_settings['postdate'])) {
+						$dateoutput = ' | '.$post_settings['postdate'];
+					}									
+					$content .= '<li><a href="'.$post_settings['link'].'">'.$post_settings['title'].'</a>'.$dateoutput.$authoroutput.$post_settings['showlink'].$post_settings['excerpt'].'</li>';
+				}
+			}
+			
 		}
 	}
 	

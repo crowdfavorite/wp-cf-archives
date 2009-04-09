@@ -26,64 +26,73 @@ else if (is_file(trailingslashit(ABSPATH.PLUGINDIR).'cf-archives/cf-archives.php
 }
 
 function cfar_request_handler() {
-	if (!empty($_GET['cf_action'])) {
-		switch ($_GET['cf_action']) {
-			case 'cfar_admin_js':
-				cfar_admin_js();
-				break;
-			case 'cfar_head_js':
-				cfar_head_js();
-				break;
-			case 'cfar_head_css':
-				cfar_head_css();
-				die();
-				break;
-			case 'cfar_admin_css':
-				cfar_admin_css();
-				die();
-				break;
+	if (!current_user_can('manage_options')) {
+		$blogurl = '';
+		if (is_ssl()) {
+			$blogurl = str_replace('http://','https://',get_bloginfo('wpurl'));
 		}
-	}
-	if (!empty($_POST['cf_action'])) {
-		switch ($_POST['cf_action']) {
-			case 'cfar_update_settings':
-				cfar_save_settings($_POST['cfar_settings']);
-				wp_redirect(trailingslashit(get_bloginfo('wpurl')).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
-				die();
-				break;
-			case 'cfar_rebuild_archive':
-				cfar_rebuild_archive();
-				wp_redirect(trailingslashit(get_bloginfo('wpurl')).'wp-admin/options-general.php?page=cf-archives.php&cf_message=archive_rebuilt');
-				die();
-				break;
-			case 'cfar_rebuild_archive_batch':
-				if (!is_numeric($_POST['cfar_batch_increment']) || !is_numeric($_POST['cfar_batch_offset'])) {
-					echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
-					exit();
-				}
-				$increment = (int) $_POST['cfar_batch_increment'];
-				$offset = (int) $_POST['cfar_batch_offset'];
-				cfar_rebuild_archive_batch($increment,$offset);
-				die();
-				break;
-			case 'cfar_ajax_month_archive':
-				$args = array();
-				$year = (int) $_POST['cfar_year'];
-				$month = (int) $_POST['cfar_month'];
-				$args['year_show'] = $_POST['cfar_year_show'];
-				$args['year_hide'] = $_POST['cfar_year_hide'];
-				$args['month_show'] = $_POST['cfar_month_show'];
-				$args['month_hide'] = $_POST['cfar_month_hide'];
-				$args['post_show'] = $_POST['cfar_post_show'];
-				$args['post_hide'] = $_POST['cfar_post_hide'];
-				$args['category'] = $_POST['cfar_category'];
-				$args['show_heads'] = $_POST['cfar_show_heads'];
-				$args['add_div'] = $_POST['cfar_add_div'];
-				$args['add_ul'] = $_POST['cfar_add_ul'];
-				$args['print_month_content'] = $_POST['cfar_print_month_content'];
-				cfar_month_archive($year,$month,$args);
-				die();
-				break;
+		else {
+			$blogurl = get_bloginfo('wpurl');
+		}		
+		if (!empty($_GET['cf_action'])) {
+			switch ($_GET['cf_action']) {
+				case 'cfar_admin_js':
+					cfar_admin_js();
+					break;
+				case 'cfar_head_js':
+					cfar_head_js();
+					break;
+				case 'cfar_head_css':
+					cfar_head_css();
+					die();
+					break;
+				case 'cfar_admin_css':
+					cfar_admin_css();
+					die();
+					break;
+			}
+		}
+		if (!empty($_POST['cf_action'])) {
+			switch ($_POST['cf_action']) {
+				case 'cfar_update_settings':
+					cfar_save_settings($_POST['cfar_settings']);
+					wp_redirect($blogurl.'wp-admin/options-general.php?page=cf-archives.php&updated=true');
+					die();
+					break;
+				case 'cfar_rebuild_archive':
+					cfar_rebuild_archive();
+					wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&cf_message=archive_rebuilt');
+					die();
+					break;
+				case 'cfar_rebuild_archive_batch':
+					if (!is_numeric($_POST['cfar_batch_increment']) || !is_numeric($_POST['cfar_batch_offset'])) {
+						echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
+						exit();
+					}
+					$increment = (int) $_POST['cfar_batch_increment'];
+					$offset = (int) $_POST['cfar_batch_offset'];
+					cfar_rebuild_archive_batch($increment,$offset);
+					die();
+					break;
+				case 'cfar_ajax_month_archive':
+					$args = array();
+					$year = (int) $_POST['cfar_year'];
+					$month = (int) $_POST['cfar_month'];
+					$args['year_show'] = $_POST['cfar_year_show'];
+					$args['year_hide'] = $_POST['cfar_year_hide'];
+					$args['month_show'] = $_POST['cfar_month_show'];
+					$args['month_hide'] = $_POST['cfar_month_hide'];
+					$args['post_show'] = $_POST['cfar_post_show'];
+					$args['post_hide'] = $_POST['cfar_post_hide'];
+					$args['category'] = $_POST['cfar_category'];
+					$args['show_heads'] = $_POST['cfar_show_heads'];
+					$args['add_div'] = $_POST['cfar_add_div'];
+					$args['add_ul'] = $_POST['cfar_add_ul'];
+					$args['print_month_content'] = $_POST['cfar_print_month_content'];
+					cfar_month_archive($year,$month,$args);
+					die();
+					break;
+			}
 		}
 	}
 }

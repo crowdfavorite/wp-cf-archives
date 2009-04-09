@@ -34,24 +34,6 @@ function cfar_request_handler() {
 		else {
 			$blogurl = get_bloginfo('wpurl');
 		}		
-		if (!empty($_GET['cf_action'])) {
-			switch ($_GET['cf_action']) {
-				case 'cfar_admin_js':
-					cfar_admin_js();
-					break;
-				case 'cfar_head_js':
-					cfar_head_js();
-					break;
-				case 'cfar_head_css':
-					cfar_head_css();
-					die();
-					break;
-				case 'cfar_admin_css':
-					cfar_admin_css();
-					die();
-					break;
-			}
-		}
 		if (!empty($_POST['cf_action'])) {
 			switch ($_POST['cf_action']) {
 				case 'cfar_update_settings':
@@ -95,6 +77,24 @@ function cfar_request_handler() {
 			}
 		}
 	}
+	if (!empty($_GET['cf_action'])) {
+		switch ($_GET['cf_action']) {
+			case 'cfar_admin_js':
+				cfar_admin_js();
+				break;
+			case 'cfar_head_js':
+				cfar_head_js();
+				break;
+			case 'cfar_head_css':
+				cfar_head_css();
+				die();
+				break;
+			case 'cfar_admin_css':
+				cfar_admin_css();
+				die();
+				break;
+		}
+	}	
 }
 add_action('init', 'cfar_request_handler');
 

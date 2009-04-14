@@ -26,7 +26,7 @@ else if (is_file(trailingslashit(ABSPATH.PLUGINDIR).'cf-archives/cf-archives.php
 }
 
 function cfar_request_handler() {
-	if (!current_user_can('manage_options')) {
+	if (current_user_can('manage_options')) {
 		$blogurl = '';
 		if (is_ssl()) {
 			$blogurl = str_replace('http://','https://',get_bloginfo('wpurl'));
@@ -56,25 +56,29 @@ function cfar_request_handler() {
 					cfar_rebuild_archive_batch($increment,$offset);
 					die();
 					break;
-				case 'cfar_ajax_month_archive':
-					$args = array();
-					$year = (int) $_POST['cfar_year'];
-					$month = (int) $_POST['cfar_month'];
-					$args['year_show'] = $_POST['cfar_year_show'];
-					$args['year_hide'] = $_POST['cfar_year_hide'];
-					$args['month_show'] = $_POST['cfar_month_show'];
-					$args['month_hide'] = $_POST['cfar_month_hide'];
-					$args['post_show'] = $_POST['cfar_post_show'];
-					$args['post_hide'] = $_POST['cfar_post_hide'];
-					$args['category'] = $_POST['cfar_category'];
-					$args['show_heads'] = $_POST['cfar_show_heads'];
-					$args['add_div'] = $_POST['cfar_add_div'];
-					$args['add_ul'] = $_POST['cfar_add_ul'];
-					$args['print_month_content'] = $_POST['cfar_print_month_content'];
-					cfar_month_archive($year,$month,$args);
-					die();
-					break;
 			}
+		}
+	}
+	if (!empty($_POST['cf_action'])) {
+		switch ($_POST['cf_action']) {
+			case 'cfar_ajax_month_archive':
+				$args = array();
+				$year = (int) $_POST['cfar_year'];
+				$month = (int) $_POST['cfar_month'];
+				$args['year_show'] = $_POST['cfar_year_show'];
+				$args['year_hide'] = $_POST['cfar_year_hide'];
+				$args['month_show'] = $_POST['cfar_month_show'];
+				$args['month_hide'] = $_POST['cfar_month_hide'];
+				$args['post_show'] = $_POST['cfar_post_show'];
+				$args['post_hide'] = $_POST['cfar_post_hide'];
+				$args['category'] = $_POST['cfar_category'];
+				$args['show_heads'] = $_POST['cfar_show_heads'];
+				$args['add_div'] = $_POST['cfar_add_div'];
+				$args['add_ul'] = $_POST['cfar_add_ul'];
+				$args['print_month_content'] = $_POST['cfar_print_month_content'];
+				cfar_month_archive($year,$month,$args);
+				die();
+				break;
 		}
 	}
 	if (!empty($_GET['cf_action'])) {
@@ -474,7 +478,7 @@ add_filter('plugin_action_links', 'cfar_plugin_action_links', 10, 2);
 
 function cfar_settings_form() {
 	global $wpdb;
-	
+
 	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	

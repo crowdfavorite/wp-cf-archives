@@ -38,7 +38,7 @@ function cfar_request_handler() {
 			switch ($_POST['cf_action']) {
 				case 'cfar_update_settings':
 					cfar_save_settings($_POST['cfar_settings']);
-					wp_redirect($blogurl.'wp-admin/options-general.php?page=cf-archives.php&updated=true');
+					wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
 					die();
 					break;
 				case 'cfar_rebuild_archive':

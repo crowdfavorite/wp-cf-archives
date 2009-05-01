@@ -531,7 +531,7 @@ function cfar_settings_form() {
 	</div>
 	<div class="wrap">
 		<div class="icon32" id="icon-options-general"><br/></div><h2>'.__('CF Archives', 'cf-archives').'</h2>
-		<form id="cfar_settings_form" name="cfar_settings_form" action="'.get_bloginfo('wpurl').'/wp-admin/options-general.php" method="post">
+		<form id="cfar_settings_form" name="cfar_settings_form" action="" method="post">
 			<input type="hidden" name="cf_action" value="cfar_update_settings" />
 			<div style="float: left; margin: 20px;">
 			<table class="widefat" style="width: 400px; margin-top: 10px;">
@@ -787,7 +787,12 @@ function cfar_get_yearly_list($args=null) {
 }
 
 function cfar_archive_list($args = null) {
+	echo cfar_get_archive_list($args);
+}
+
+function cfar_get_archive_list($args = null) {
 	global $wpdb;
+	$return = '';
 	$defaults = array(
 		'year_show' => ''
 		, 'year_hide' => ''
@@ -811,16 +816,22 @@ function cfar_archive_list($args = null) {
 	$years = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($years[0]->option_value);
 	if($category != 0) {
-		print('<span id="cfar-category" style="display:none;">'.$category.'</span>');
+		$return .= '<span id="cfar-category" style="display:none;">'.$category.'</span>';
 	}
 	foreach($yearlist as $year => $months) {
 		$yearoutput = str_replace('_','',$year);
-		cfar_year_archive($yearoutput,$args);
+		$return .= cfar_get_year_archive($yearoutput,$args);
 	}
+	return $return;
 }
 
 function cfar_year_archive($yearinput='',$args = null) {
+	echo cfar_get_year_archive($yearinput,$args);
+}
+
+function cfar_get_year_archive($yearinput='',$args = null) {
 	global $wpdb;
+	$return = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$defaults = array(
 		'show_year_header' => ''
@@ -855,16 +866,17 @@ function cfar_year_archive($yearinput='',$args = null) {
 				}
 				if ($yearcount > 0) {
 					if (htmlspecialchars($settings['showyear']) == 'yes') {
-						print('<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>');
-						print($print);
+						$return .= '<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>';
+						$return .= $print;
 					}
 					else {
-						print('<div id="_'.$yearoutput.'">'.$print.'</div>');
+						$return .= '<div id="_'.$yearoutput.'">'.$print.'</div>';
 					}
 				}
 			}
 		}
 	}
+	return $return;
 }
 
 function cfar_month_archive($year = '',$month = '',$args = null) {

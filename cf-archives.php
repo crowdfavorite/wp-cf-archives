@@ -121,7 +121,7 @@ jQuery(function() {
 		params = {'cfar_rebuild_indexes':'1',
 				  'cfar_rebuild_offset':'0'
 				 }
-		cfar_update_status('Processing archives');
+		cfar_update_status('<div id="ajax-spinner"><img src="<?php echo trailingslashit($wpserver); ?>wp-content/plugins/cf-archives/images/ajax-loader-large.gif" border="0" /></div><h1 style="text-align:center;">DO <strong>NOT</strong> NAVIGATE AWAY FROM THIS PAGE OR CLOSE THIS WINDOW</h1><br /><br />'+'Processing archives');
 		
 		// process posts
 		while(!finished) {
@@ -131,11 +131,11 @@ jQuery(function() {
 				return;
 			}
 			else if (!response.result && response.finished) {
-				cfar_update_status('Archive processing complete.');
+				cfar_update_status('Archive processing complete. You can now close or navigate away from this page.');
 				finished = true;
 			}
 			else if (response.result) {
-				cfar_update_status(response.message);
+				cfar_update_status('<div id="ajax-spinner"><img src="<?php echo trailingslashit($wpserver); ?>wp-content/plugins/cf-archives/images/ajax-loader-large.gif" border="0" /></div><h1 style="text-align:center;">DO <strong>NOT</strong> NAVIGATE AWAY FROM THIS PAGE OR CLOSE THIS WINDOW</h1><br /><br />'+response.message);
 				batch_offset = (batch_offset + batch_increment);
 			}
 		}
@@ -230,6 +230,9 @@ function cfar_head_js() {
 function cfar_admin_css() {
 	header('Content-type: text/css');
 ?>
+	#ajax-spinner {
+		text-align:center;
+	}
 <?php
 	die();
 }

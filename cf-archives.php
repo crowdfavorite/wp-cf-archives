@@ -219,8 +219,26 @@ function cfar_head_js() {
 			addContent.append(ajaxSpinner);
 			jQuery.post("<?php echo trailingslashit($wpserver); ?>", { cf_action: 'cfar_ajax_month_archive', cfar_year: year, cfar_month: month, cfar_show_heads: 'no', cfar_add_div: 'no', cfar_add_ul: 'show', cfar_print_month_content: 'show', cfar_category: category, cfar_show_author: 'yes' },function(data){
 				jQuery('#ajax-spinner').remove();
-				addContent.append(data).addClass('filled');
-			});	
+				
+				data = jQuery(data);
+				jQuery('a.month-post-show', data).each(function() {
+					jQuery(this).click(function(){
+						var ids = jQuery(this).attr('id').split('-');
+						var showhide = ids[0];
+						var post_id = ids[1];
+						
+						if (showhide == 'show') {
+							showPreview(post_id);
+						}
+						else {
+							hidePreview(post_id);
+						}
+						return false;
+					});
+				});
+				
+				addContent.append(data).addClass('filled');				
+			},'html');	
 		}
 	}
 	<?php
@@ -1011,8 +1029,9 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 				else {
 					$post_hide_text = __('Hide','cf-archives');
 				}
-				$showexcerpt = '<span class="month-post-show" id="show-'.$post['id'].'" onClick="showPreview(\''.$post['id'].'\')" style=""> | '.$post_show_text.'</span>';
-				$showexcerpt .= '<span class="month-post-show" id="hide-'.$post['id'].'" onClick="hidePreview(\''.$post['id'].'\')" style="display: none"> | '.$post_hide_text.'</span>';
+				$showexcerpt = '<a href="#" class="month-post-show cf-show" id="show-'.$post['id'].'" style=""> | '.$post_show_text.'</a>';
+				$showexcerpt .= '<a href="#" class="month-post-show cf-hide" id="hide-'.$post['id'].'" style="display: none"> | '.$post_hide_text.'</a>';
+
 			}
 			else {
 				$showexcerpt = '';

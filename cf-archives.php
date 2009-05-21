@@ -13,6 +13,35 @@ Author URI: http://crowdfavorite.com
 if (!defined('PLUGINDIR')) {
 	define('PLUGINDIR', 'wp-content/plugins');
 }
+
+// README HANDLING
+	add_action('admin_init','cfar_add_readme');
+
+	/**
+	 * Enqueue the readme function
+	 */
+	function cfar_add_readme() {
+		if(function_exists('cfreadme_enqueue')) {
+			cfreadme_enqueue('cf-archives','cfar_readme');
+		}
+	}
+	
+	/**
+	 * return the contents of the links readme file
+	 * replace the image urls with full paths to this plugin install
+	 *
+	 * @return string
+	 */
+	function cfar_readme() {
+		$file = realpath(dirname(__FILE__)).'/README.txt';
+		if(is_file($file) && is_readable($file)) {
+			$markdown = file_get_contents($file);
+			$markdown = preg_replace('|!\[(.*?)\]\((.*?)\)|','![$1]('.WP_PLUGIN_URL.'/cf-archives/$2)',$markdown);
+			return $markdown;
+		}
+		return null;
+	}
+		
 global $wpdb;
 define('CF_ARCHIVETABLE', $wpdb->options);
 

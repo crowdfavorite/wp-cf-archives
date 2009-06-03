@@ -213,6 +213,24 @@ function cfar_head_js() {
 	
 	header('Content-type: text/javascript');
 	?>
+	jQuery(document).ready(function() {
+		jQuery('a.month-post-show', document).each(function() {
+			jQuery(this).click(function(){
+				var ids = jQuery(this).attr('id').split('-');
+				var showhide = ids[0];
+				var post_id = ids[1];
+
+				if (showhide == 'show') {
+					showPreview(post_id);
+				}
+				else {
+					hidePreview(post_id);
+				}
+				return false;
+			});
+		});
+	});
+	
 	function showContent(id) {
 		jQuery('#content-'+id).slideDown();
 		jQuery('#hide-'+id).attr('style','');
@@ -946,7 +964,7 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 		, 'show_month_hide' => ''
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-	
+
 	if ($year != '' && $month != '') {
 		$return = '';
 		$archives = $wpdb->get_results("SELECT option_value FROM ".$wpdb->options." WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");

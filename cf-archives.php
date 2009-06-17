@@ -670,23 +670,25 @@ function cfar_settings_form() {
 					</tr>
 				</thead>
 				');
-				foreach($yearlist as $year => $months) {
-					$value = '';
-					$yearoutput = str_replace('_','',$year);
-					
-					if (in_array($year,$settings['exclude_years'])) {
-						$value = 'checked=checked';
+				if (is_array($yearlist)) {
+					foreach($yearlist as $year => $months) {
+						$value = '';
+						$yearoutput = str_replace('_','',$year);
+
+						if (in_array($year,$settings['exclude_years'])) {
+							$value = 'checked=checked';
+						}
+						print('
+						<tr>
+							<td>
+								'.$yearoutput.'
+							</td>
+							<td style="text-align:center;">
+								<input type="checkbox" name="cfar_settings[year_exclude]['.$yearoutput.']"'.$value.' />
+							</td>
+						</tr>
+						');
 					}
-					print('
-					<tr>
-						<td>
-							'.$yearoutput.'
-						</td>
-						<td style="text-align:center;">
-							<input type="checkbox" name="cfar_settings[year_exclude]['.$yearoutput.']"'.$value.' />
-						</td>
-					</tr>
-					');
 				}
 				print('
 			</table>
@@ -886,9 +888,11 @@ function cfar_get_archive_list($args = null) {
 	if($category != 0) {
 		$return .= '<span id="cfar-category" style="display:none;">'.$category.'</span>';
 	}
-	foreach($yearlist as $year => $months) {
-		$yearoutput = str_replace('_','',$year);
-		$return .= cfar_get_year_archive($yearoutput,$args);
+	if (is_array($yearlist)) {
+		foreach($yearlist as $year => $months) {
+			$yearoutput = str_replace('_','',$year);
+			$return .= cfar_get_year_archive($yearoutput,$args);
+		}
 	}
 	return $return;
 }

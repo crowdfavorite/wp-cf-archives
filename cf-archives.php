@@ -721,13 +721,20 @@ function cfar_save_settings($settings) {
 			$exclude_years[] = $year;
 		}
 	}
-
-	update_option('cf_archives', array(
+	
+	$settings_input = array(
 		'excerpt' => $settings['excerpt'],
 		'showyear' => $settings['showyear'],
 		'yearhide' => $settings['yearhide'],
 		'exclude_years' => $exclude_years,
-	));
+	);
+	
+	if (!get_option('cf_archives')) {
+		add_option('cf_archives', $settings_input, false, 'no');
+	}
+	else {
+		update_option('cf_archives',$settings_input);
+	}
 }
 
 function cfar_trim_excerpt($excerpt,$content,$length = 250) {

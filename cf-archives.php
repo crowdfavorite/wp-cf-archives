@@ -305,7 +305,9 @@ function cfar_admin_head() {
 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_admin_css" />';
 	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_admin_js"></script>';
 }
-add_action('admin_head', 'cfar_admin_head');
+if (isset($_GET['page']) && $_GET['page'] == basename(__FILE__)) {
+	add_action('admin_head', 'cfar_admin_head');
+}
 
 function cfar_wp_head() {
 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_head_css" />';

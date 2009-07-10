@@ -133,6 +133,7 @@ add_action('init', 'cfar_request_handler');
 
 wp_enqueue_script('jquery');
 function cfar_admin_js() {
+	
 	header('Content-type: text/javascript');
 ?>
 jQuery(function() {
@@ -200,7 +201,46 @@ jQuery(function() {
 		jQuery('#index-status p').html(message);
 	}
 	
+	jQuery('.cfar-year-check').each(function() {
+		if (jQuery(this).is(':checked')) {
+			jQuery(this).parent().parent().siblings().each(function() {
+				jQuery(this).children().attr('style', 'opacity: .5;').children('input').attr('disabled','disabled');
+			});
+		}
+	});
+	cfar_year_remove_check(jQuery('.cfar-year-check'));
 });
+function cfar_add_category() {
+	var id = new Date().valueOf();
+	var section = id.toString();
+	
+	var html = jQuery('#newitem_SECTION').html().replace(/###SECTION###/g, section);
+
+	jQuery('#cfar-categories').append(html);
+	jQuery('#cfar-item-'+section).attr('style','');
+	
+	cfar_year_remove_check(jQuery('#category_'+section+' .cfar-year-check'));
+}
+function cfar_remove_category(id) {
+	jQuery('#category_'+id).remove();
+}
+function cfar_year_remove_check(me) {
+	jQuery(me).each(function() {
+		jQuery(this).click(function() {
+			if (jQuery(this).is(':checked')) {
+				jQuery(this).parent().parent().siblings().each(function() {
+					jQuery(this).children().attr('style', 'opacity: .5;').children('input').attr('disabled','disabled');
+				});
+			}
+			else {
+				jQuery(this).parent().parent().siblings().each(function() {
+					jQuery(this).children().attr('style', '').children('input').attr('disabled','');
+				});
+			}
+		});
+	});
+}
+
 <?php
 	die();
 }
@@ -280,6 +320,54 @@ function cfar_admin_css() {
 	#ajax-spinner {
 		text-align:center;
 	}
+	.archive-category-year {
+		float:left;
+		clear:left;
+		line-height:25px;
+		width:100%;
+		display:inline;
+		border-bottom: 1px solid #DFDFDF;
+		border-left: 1px solid #DFDFDF;
+	}
+	.archive-month {
+		display:block;
+		float:left;
+		padding-left:2px;
+		width:7%;		
+	}
+	.archive-year {
+		display:block;
+		float:left;
+		padding-left:2px;
+		width:7%;
+	}
+	.archive-table {
+		-moz-border-radius: 0;
+		-khtml-border-radius: 0;
+		-webkit-border-radius: 0;
+		border-radius: 0;
+	}
+	.archive-table-top {
+		-moz-border-radius-bottomleft: 0;
+		-moz-border-radius-bottomright: 0;
+		-khtml-border-radius-bottomleft: 0;
+		-khtml-border-radius-bottomright: 0;
+		-webkit-border-bottom-left-radius: 0;
+		-webkit-border-bottom-right-radius: 0;
+		border-radius-bottomleft: 0;
+		border-radius-bottomright: 0;
+	}
+	.archive-table-bottom {
+		-moz-border-radius-topleft: 0;
+		-moz-border-radius-topright: 0;
+		-khtml-border-radius-topleft: 0;
+		-khtml-border-radius-topright: 0;
+		-webkit-border-top-left-radius: 0;
+		-webkit-border-top-right-radius: 0;
+		border-radius-topleft: 0;
+		border-radius-topright: 0;
+	}
+	
 <?php
 	die();
 }
@@ -676,6 +764,95 @@ function cfar_settings_form() {
 			</table>
 			</div>
 			<div class="clear"></div>
+			<h3>Remove Years/Months by Archive</h3>
+			<table class="widefat archive-table-top">
+				<thead>
+					<tr>
+						<th scope="col" style="text-align:center; width:200px;">'.__('Category','cf-archives').'</th>
+						<th scope="col">'.__('Remove Display','cf-archives').'</th>
+					</tr>
+				</thead>
+				<tbody>
+				');
+				foreach ($settings['category_exclude'] as $exclude) {
+					print('
+					<tr id="category_'.$exclude['category'].'">
+						<td style="vertical-align:middle; width:200px;">
+							<select name="cfar_settings[category_exclude]['.$exclude['category'].'][category_id]" style="max-width:175px;">
+							');
+							$categories = get_categories(array('hide_empty' => false));
+							foreach ($categories as $category) {
+								$selected = '';
+								if ($category->term_id == $exclude['category']) {
+									$selected = ' SELECTED';
+								}
+								print('<option value="'.$category->term_id.'"'.$selected.'>'.$category->name.'</option>');
+							}
+							print('
+							</select>
+							<br />
+							<br />
+							<input type="button" class="button" value="Remove Category" onClick="cfar_remove_category('.$exclude['category'].')" />
+						</td>
+						<td style="vertical-align:middle; padding:0;">
+							');
+							$i = 0;
+							foreach ($yearlist as $year => $months) {
+								$striping = $i++%2 ? ' alternate' : NULL;
+								$yearoutput = str_replace('_','',$year);
+								$yearselected = '';
+								if (count($exclude['excludes'][$yearoutput]) == 12) {
+									$yearselected = ' checked="checked"';
+								}
+								print('
+									<div class="archive-category-year'.$striping.'">
+										<div class="archive-year">
+											<label>
+												<input type="checkbox" class="cfar-year-check" name="cfar_settings[category_exclude]['.$exclude['category'].'][year]['.$yearoutput.']"'.$yearselected.' />
+												'.$yearoutput.'
+											</label>
+										</div>
+								');
+								foreach ($months as $month => $count) {
+									$timestamp = mktime(0, 0, 0, $month, 1, $yearoutput);
+								    $month_display = date("M", $timestamp);
+									$monthselected = '';
+									if (!empty($exclude['excludes'][$yearoutput][$month])) {
+										$monthselected = ' checked="checked"';
+									}
+									print('
+										<div class="archive-month">
+											<label>
+												<input type="checkbox" name="cfar_settings[category_exclude]['.$exclude['category'].'][yearmonth]['.$yearoutput.']['.$month.']"'.$monthselected.' />
+												'.$month_display.'
+											</label>
+										</div>
+									');
+								}
+								print('
+								</div>
+								');
+							}
+							print('
+							<div class="clear"></div>
+						</td>
+					</tr>
+					');
+				}
+				print('
+				</tbody>			
+			</table>
+			<div id="cfar-categories">
+			</div>
+			<table class="widefat archive-table-bottom">
+				<tfoot>
+					<tr>
+						<td colspan="2">
+							<input type="button" class="button" value="Add New Category" onClick="cfar_add_category()" />
+						</td>
+					</tr>
+				</tfoot>
+			</table>
 			<p class="submit" style="border-top: none;">
 				<input type="submit" name="submit" value="'.__('Save Settings', 'cf-archives').'" />
 			</p>
@@ -688,6 +865,61 @@ function cfar_settings_form() {
 				<p></p>
 			</div>
 		</form>
+		<div style="display:none;" id="newitem_SECTION">
+			<table class="widefat archive-table" id="category_###SECTION###">
+				<tbody>
+					<tr>
+						<td style="vertical-align:middle; width:200px;">
+							<select name="cfar_settings[category_exclude][###SECTION###][category_id]" style="max-width:175px;">
+							');
+							$categories = get_categories(array('hide_empty' => false));
+							foreach ($categories as $category) {
+								print('<option value="'.$category->term_id.'">'.$category->name.'</option>');
+							}
+							print('
+							</select>
+							<br />
+							<br />
+							<input type="button" class="button" value="Remove Category" onClick="cfar_remove_category(###SECTION###)" />
+						</td>
+						<td style="vertical-align:middle; padding:0;">
+							');
+							$i = 0;
+							foreach ($yearlist as $year => $months) {
+								$striping = $i++%2 ? ' alternate' : NULL;
+								$yearoutput = str_replace('_','',$year);
+								print('
+									<div class="archive-category-year'.$striping.'">
+										<div class="archive-year">
+											<label>
+												<input type="checkbox" class="cfar-year-check" name="cfar_settings[category_exclude][###SECTION###][year]['.$yearoutput.']" />
+												'.$yearoutput.'
+											</label>
+										</div>
+								');
+								foreach ($months as $month => $count) {
+									$timestamp = mktime(0, 0, 0, $month, 1, $yearoutput);
+								    $month_display = date("M", $timestamp);
+									print('
+										<div class="archive-month">
+											<label>
+												<input type="checkbox" name="cfar_settings[category_exclude][###SECTION###][yearmonth]['.$yearoutput.']['.$month.']" />
+												'.$month_display.'
+											</label>
+										</div>
+									');
+								}
+								print('
+								</div>
+								');
+							}
+							print('
+							<div class="clear"></div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>		
 	</div>
 	');
 }
@@ -703,12 +935,52 @@ function cfar_save_settings($settings) {
 			$exclude_years[] = $year;
 		}
 	}
+	
+	if (is_array($settings['category_exclude'])) {
+		$category_exclude = array();
+		foreach ($settings['category_exclude'] as $exclude) {
+			$excludes = array();
+			if (is_array($exclude['yearmonth']) && !empty($exclude['yearmonth'])) {
+				foreach ($exclude['yearmonth'] as $year => $months) {
+					$excludes[$year] = array();
+					foreach ($months as $month => $month_status) {
+						$excludes[$year][$month] = $month;
+					}
+				}
+			}
 
+			if (is_array($exclude['year']) && !empty($exclude['year'])) {
+				foreach ($exclude['year'] as $year => $status) {
+					$excludes[$year] = array(
+						'1' => '1',
+						'2' => '2',
+						'3' => '3',
+						'4' => '4',
+						'5' => '5',
+						'6' => '6',
+						'7' => '7',
+						'8' => '8',
+						'9' => '9',
+						'10' => '10',
+						'11' => '11',
+						'12' => '12'
+					);
+				}
+			}
+			
+			$category_exclude[$exclude['category_id']] = array(
+				'category' => $exclude['category_id'],
+				'excludes' => $excludes
+			);
+		}
+	}
+	
 	update_option('cf_archives', array(
 		'excerpt' => $settings['excerpt'],
 		'showyear' => $settings['showyear'],
 		'yearhide' => $settings['yearhide'],
 		'exclude_years' => $exclude_years,
+		'category_exclude' => $category_exclude
 	));
 }
 
@@ -819,6 +1091,20 @@ function cfar_get_yearly_list($args=null) {
 						}
 					}
 				}
+				
+				if (is_array($settings['category_exclude']) && !empty($settings['category_exclude'])) {
+					// Filter the output from the categories by month and by year
+					foreach ($settings['category_exclude'] as $category_id => $exclude) {
+						// We don't need to worry about filtering if the categories don't match
+						if ($category_id != $category) { continue; }
+						if (is_array($exclude['excludes'][$yearoutput])) {
+							if (!empty($exclude['excludes'][$yearoutput][intval($month)])) {
+								$count = 0;
+							}
+						}
+					}
+				}
+
 				if ($count > 0) {
 					$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
 				}
@@ -955,6 +1241,20 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 		$posts = maybe_unserialize($archives[0]->option_value);
 		$content = '';
 		$settings = maybe_unserialize(get_option('cf_archives'));
+
+		if (is_array($settings['category_exclude']) && !empty($settings['category_exclude'])) {
+			// Filter the output from the categories by month and by year
+			foreach ($settings['category_exclude'] as $category_id => $exclude) {
+				// We don't need to worry about filtering if the categories don't match
+				if ($category_id != $category) { continue; }
+				if (is_array($exclude['excludes'][$year])) {
+					if (!empty($exclude['excludes'][$year][intval($month)])) {
+						return false;
+					}
+				}
+			}
+		}
+		
 		if ($show_month_hide != '') {
 			$settings['yearhide'] = $show_month_hide;
 		}

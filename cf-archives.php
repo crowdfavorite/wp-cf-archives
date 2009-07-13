@@ -776,7 +776,7 @@ function cfar_settings_form() {
 			</table>
 			</div>
 			<div class="clear"></div>
-			<h3>Remove Years/Months by Archive</h3>
+			<h3>Remove Years/Months by Category</h3>
 			<table class="widefat archive-table-top">
 				<thead>
 					<tr>

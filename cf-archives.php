@@ -219,23 +219,32 @@ function cfar_add_category() {
 	jQuery('#cfar-categories').append(html);
 	jQuery('#cfar-item-'+section).attr('style','');
 	
+	jQuery('#archive_changes').show();
+	
 	cfar_year_remove_check(jQuery('#category_'+section+' .cfar-year-check'));
 }
 function cfar_remove_category(id) {
-	jQuery('#category_'+id).remove();
+	if (confirm('Are you sure you want to delete this?')) {
+		jQuery('#category_'+id).remove();
+		jQuery('#archive_changes').show();
+	}
+	return false;
 }
 function cfar_year_remove_check(me) {
 	jQuery(me).each(function() {
 		jQuery(this).click(function() {
-			if (jQuery(this).is(':checked')) {
-				jQuery(this).parent().parent().siblings().each(function() {
+			_this = jQuery(this);
+			if (_this.is(':checked')) {
+				_this.parent().parent().siblings().each(function() {
 					jQuery(this).children().attr('style', 'opacity: .5;').children('input').attr('disabled','disabled');
 				});
+				jQuery('#archive_changes').show();
 			}
 			else {
-				jQuery(this).parent().parent().siblings().each(function() {
+				_this.parent().parent().siblings().each(function() {
 					jQuery(this).children().attr('style', '').children('input').attr('disabled','');
 				});
+				jQuery('#archive_changes').show();
 			}
 		});
 	});
@@ -669,6 +678,9 @@ function cfar_settings_form() {
 	<div id="archive_rebuilt" class="updated fade" style="display: none;">
 		<p>'.__('Archive Rebuilt.', 'cf-archives').'</p>
 	</div>
+	<div id="archive_changes" class="updated fade" style="display: none;">
+		<p>'.__('To save changes, click the "Save Settings" button at the bottom of the page.', 'cf-archives').'</p>
+	</div>
 	<div class="wrap">
 		<div class="icon32" id="icon-options-general"><br/></div><h2>'.__('CF Archives', 'cf-archives').'</h2>
 		<form id="cfar_settings_form" name="cfar_settings_form" action="" method="post">
@@ -1092,19 +1104,10 @@ function cfar_get_yearly_list($args=null) {
 					}
 				}
 				
-				if (is_array($settings['category_exclude']) && !empty($settings['category_exclude'])) {
-					// Filter the output from the categories by month and by year
-					foreach ($settings['category_exclude'] as $category_id => $exclude) {
-						// We don't need to worry about filtering if the categories don't match
-						if ($category_id != $category) { continue; }
-						if (is_array($exclude['excludes'][$yearoutput])) {
-							if (!empty($exclude['excludes'][$yearoutput][intval($month)])) {
-								$count = 0;
-							}
-						}
-					}
+				if (is_array($settings['category_exclude']) && isset($settings['category_exclude']) && cfar_check_exclude($settings['category_exclude'])) {
+					$count = 0;
 				}
-
+				
 				if ($count > 0) {
 					$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
 				}
@@ -1241,18 +1244,9 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 		$posts = maybe_unserialize($archives[0]->option_value);
 		$content = '';
 		$settings = maybe_unserialize(get_option('cf_archives'));
-
-		if (is_array($settings['category_exclude']) && !empty($settings['category_exclude'])) {
-			// Filter the output from the categories by month and by year
-			foreach ($settings['category_exclude'] as $category_id => $exclude) {
-				// We don't need to worry about filtering if the categories don't match
-				if ($category_id != $category) { continue; }
-				if (is_array($exclude['excludes'][$year])) {
-					if (!empty($exclude['excludes'][$year][intval($month)])) {
-						return false;
-					}
-				}
-			}
+		
+		if (is_array($settings['category_exclude']) && isset($settings['category_exclude']) && cfar_check_exclude($settings['category_exclude'])) {
+			return false;
 		}
 		
 		if ($show_month_hide != '') {
@@ -1435,6 +1429,20 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	$return = array('content' => $content, 'count' => $post_count);
 	
 	return $return;
+}
+
+function cfar_check_exclude($settings) {
+	// Filter the output from the categories by month and by year
+	foreach ($settings as $category_id => $exclude) {
+		// We don't need to worry about filtering if the categories don't match
+		if ($category_id != $category) { continue; }
+		if (is_array($exclude['excludes'][$yearoutput])) {
+			if (!empty($exclude['excludes'][$yearoutput][intval($month)])) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 function cfar_widget($args) {

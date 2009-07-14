@@ -21,6 +21,18 @@
 - This option can be overridden using the template tag in the currently active theme
 - Once displayed years have been changed, the "Save Settings" button must be clicked to save
 
+### Hiding Years/Month Per Category
+
+- To add a category to have years/months removed:
+	1.  Click the "Add New Category" button in the Remove Years/Months by Category section
+	2.  Select the category from the drop down
+	3.  Click the checkbox to the left of the year/month to be removed
+		- If a year is clicked, all months for that year will be disabled and automatically removed
+	4.  Click the "Save Settings" button to save changes
+- To remove a category from the list:
+	1.  Click the "Remove Category" button, then click "OK" from the confirmation box
+	2.  Click the "Save Settings" button to save changes
+
 ### Rebuilding the Archives
 
 - From time to time the archives can become corrupted or not display proper data due to various reasons

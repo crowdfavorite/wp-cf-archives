@@ -319,6 +319,23 @@ function cfar_head_js() {
 			},'html');	
 		}
 	}
+	jQuery(document).ready(function() {
+		jQuery('a.month-post-show').each(function() {
+			jQuery(this).click(function(){
+				var ids = jQuery(this).attr('id').split('-');
+				var showhide = ids[0];
+				var post_id = ids[1];
+				
+				if (showhide == 'show') {
+					showPreview(post_id);
+				}
+				else {
+					hidePreview(post_id);
+				}
+				return false;
+			});
+		});
+	});
 	<?php
 	die();
 }

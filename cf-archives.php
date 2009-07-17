@@ -42,9 +42,6 @@ if (!defined('PLUGINDIR')) {
 		return null;
 	}
 		
-global $wpdb;
-define('CF_ARCHIVETABLE', $wpdb->options);
-
 load_plugin_textdomain('cf-archives');
 
 if (is_file(trailingslashit(ABSPATH.PLUGINDIR).'cf-archives.php')) {
@@ -490,7 +487,7 @@ function cfar_add_archive($post_id) {
 		$archive_date = $year.'-'.$month;
 		$new_post = true;
 		
-		$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$archive_date."'");
+		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$archive_date."'");
 		$start = maybe_unserialize($archives[0]->option_value);
 
 		$excerpt = cfar_trim_excerpt($save_post->post->post_excerpt,$save_post->post->post_content);
@@ -513,7 +510,7 @@ function cfar_add_archive($post_id) {
 			)
 		);
 		if (!is_array($start)) {
-			$query = "INSERT INTO ".CF_ARCHIVETABLE." (`option_id` ,`blog_id` ,`option_name` ,`option_value` ,`autoload`)VALUES (NULL , '0', '".$archive_date."', '".$wpdb->escape(serialize($insert))."', 'no');";
+			$query = "INSERT INTO $wpdb->options (`option_id` ,`blog_id` ,`option_name` ,`option_value` ,`autoload`)VALUES (NULL , '0', '".$archive_date."', '".$wpdb->escape(serialize($insert))."', 'no');";
 			$wpdb->query($query);
 		}
 		else {
@@ -529,21 +526,21 @@ function cfar_add_archive($post_id) {
 			}
 			$result = array_merge($start,$insert);
 			ksort($result);
-			$query = "UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($result))."' WHERE option_name = '".$archive_date."'";
+			$query = "UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($result))."' WHERE option_name = '".$archive_date."'";
 			$wpdb->query($query);
 		}
-		$archives_year_list = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+		$archives_year_list = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 		$year_list = maybe_unserialize($archives_year_list[0]->option_value);
 		if (!is_array($year_list)) {
 			$yearcheck = $year.'_';
 			$new_year_list = array($yearcheck => array(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0,11=>0,12=>0));
-			$wpdb->query("INSERT INTO ".CF_ARCHIVETABLE." (option_id,blog_id,option_name,option_value,autoload)VALUES (NULL,'0','year_list','".$wpdb->escape($new_year_list)."','no');");
+			$wpdb->query("INSERT INTO $wpdb->options (option_id,blog_id,option_name,option_value,autoload)VALUES (NULL,'0','year_list','".$wpdb->escape($new_year_list)."','no');");
 			foreach($new_year_list[$yearcheck] as $key => $list_month) {
 				if ($key == $month) {
 					$new_year_list[$yearcheck][$key] = $new_year_list[$yearcheck][$key] + 1;
 				}
 			}
-			$wpdb->query("UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($new_year_list))."' WHERE option_name = 'year_list'");
+			$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($new_year_list))."' WHERE option_name = 'year_list'");
 		}
 		else {
 			if ($new_post) {
@@ -554,7 +551,7 @@ function cfar_add_archive($post_id) {
 							$year_list[$yearcheck][$key] = $year_list[$yearcheck][$key] + 1;
 						}
 					}
-					$wpdb->query("UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
+					$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
 				}
 				else {
 					$new_year_list = array($yearcheck => array(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0,11=>0,12=>0));
@@ -565,7 +562,7 @@ function cfar_add_archive($post_id) {
 					}
 					$insert_year_list = array_merge($year_list,$new_year_list);
 					krsort($insert_year_list);
-					$wpdb->query("UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($insert_year_list))."' WHERE option_name = 'year_list'");
+					$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($insert_year_list))."' WHERE option_name = 'year_list'");
 				}
 			}
 		}
@@ -588,12 +585,12 @@ function cfar_remove_archive($post_id) {
 		$archive_date = $year.'-'.$month;
 		$new_post = true;
 
-		$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$archive_date."'");
+		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$archive_date."'");
 		$start = maybe_unserialize($archives[0]->option_value);
 		unset($start[$save_post->post->post_date.'--'.$save_post->post->ID]);
-		$wpdb->query("UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($start))."' WHERE option_name = '".$archive_date."'");
+		$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($start))."' WHERE option_name = '".$archive_date."'");
 
-		$archives_year_list = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+		$archives_year_list = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 		$year_list = maybe_unserialize($archives_year_list[0]->option_value);
 		$yearcheck = $year.'_';
 		if (is_array($year_list[$yearcheck])) {
@@ -602,7 +599,7 @@ function cfar_remove_archive($post_id) {
 					$year_list[$yearcheck][$key] = $year_list[$yearcheck][$key] - 1;
 				}
 			}
-			$wpdb->query("UPDATE ".CF_ARCHIVETABLE." SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
+			$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
 		}
 	}
 	$post = $orig_post;
@@ -645,7 +642,7 @@ add_filter('plugin_action_links', 'cfar_plugin_action_links', 10, 2);
 function cfar_settings_form() {
 	global $wpdb;
 
-	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	
 	$settings = maybe_unserialize(get_option('cf_archives'));
@@ -1043,7 +1040,7 @@ function cfar_get_head_list($args=null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
-	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	$return = '';
 	$return .= $before;
@@ -1090,7 +1087,7 @@ function cfar_get_yearly_list($args=null) {
 		, 'exclude_years' => array()
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	
@@ -1110,7 +1107,7 @@ function cfar_get_yearly_list($args=null) {
 				$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
 				if($category != 0) {
 					$count = 0;
-					$post_archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
+					$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
 					$posts = maybe_unserialize($post_archives[0]->option_value);
 					if (is_array($posts)) {
 						foreach($posts as $post) {
@@ -1171,7 +1168,7 @@ function cfar_get_archive_list($args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
-	$years = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$years = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($years[0]->option_value);
 	if($category != 0) {
 		$return .= '<span id="cfar-category" style="display:none;">'.$category.'</span>';
@@ -1206,7 +1203,7 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 	}
 	
 	if ($yearinput != '') {
-		$years = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+		$years = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 		$yearlist = maybe_unserialize($years[0]->option_value);
 		$print = '';
 		foreach($yearlist as $year => $months) {
@@ -1257,7 +1254,7 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 	
 	if ($year != '' && $month != '') {
 		$return = '';
-		$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
+		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
 		$posts = maybe_unserialize($archives[0]->option_value);
 		$content = '';
 		$settings = maybe_unserialize(get_option('cf_archives'));
@@ -1339,7 +1336,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
+	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
 	$posts = maybe_unserialize($archives[0]->option_value);
 	$content = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
@@ -1469,7 +1466,7 @@ function cfar_widget($args) {
 	$title = empty($options['title']) ? __('WP Archives','cf-archives') : apply_filters('widget_title', $options['title']);
 	echo $before_widget.$before_title.$title.$after_title;
 	
-	$archives = $wpdb->get_results("SELECT option_value FROM ".CF_ARCHIVETABLE." WHERE option_name LIKE 'year_list'");
+	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
 	$yearlist = maybe_unserialize($archives[0]->option_value);
 	foreach($yearlist as $year => $months) {
 		$yearoutput = str_replace('_','',$year);

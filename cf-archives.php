@@ -800,6 +800,9 @@ function cfar_settings_form() {
 				</thead>
 				<tbody>
 				');
+				if (!is_array($settings['category_exclude'])) {
+					$settings['category_exclude'] = array();
+				}
 				foreach ($settings['category_exclude'] as $exclude) {
 					print('
 					<tr id="category_'.$exclude['category'].'">

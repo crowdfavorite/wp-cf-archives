@@ -1168,16 +1168,23 @@ function cfar_get_archive_list($args = null) {
 		, 'show_year_header' => ''
 		, 'show_month_hide' => ''
 		, 'exclude_years' => ''
+		, 'show_first_month' => false
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
-	$years = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-	$yearlist = maybe_unserialize($years[0]->option_value);
+	$yearlist = get_option('year_list');
 	if($category != 0) {
 		$return .= '<span id="cfar-category" style="display:none;">'.$category.'</span>';
 	}
+	$first = true;
 	foreach($yearlist as $year => $months) {
 		$yearoutput = str_replace('_','',$year);
+
+		if ($first) {
+			$args['first_year'] = $yearoutput;
+			$first = false;
+		}
+
 		$return .= cfar_get_year_archive($yearoutput,$args);
 	}
 	return $return;
@@ -1194,6 +1201,7 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 	$defaults = array(
 		'show_year_header' => ''
 		, 'exclude_years' => array()
+		, 'show_first_month' => false
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	$settings = maybe_unserialize(get_option('cf_archives'));
@@ -1206,17 +1214,27 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 	}
 	
 	if ($yearinput != '') {
-		$years = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-		$yearlist = maybe_unserialize($years[0]->option_value);
+		$yearlist = get_option('year_list');
 		$print = '';
+		$first = true;
 		foreach($yearlist as $year => $months) {
 			$yearcount = 0;
 			$yearoutput = str_replace('_','',$year);
+
+			if ($yearoutput != $first_year) {
+				$first = false;
+			}
+
 			if (!in_array($yearoutput, $exclude_years)) {
 				if ($yearoutput == $yearinput ) {
 					krsort($months);
 					foreach($months as $month => $count) {
 						if ($count > 0) {
+							$args['found_first_month'] = false;
+							if ($first) {
+								$first = false;
+								$args['found_first_month'] = true;
+							}
 							$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
 							$yearcount++;
 						}
@@ -1252,6 +1270,7 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 		, 'add_div' => 'show'
 		, 'add_ul' => 'show'
 		, 'show_month_hide' => ''
+		, 'show_first_month' => false
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
@@ -1284,9 +1303,22 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 			else {
 				$month_hide_text = __('Hide','cf-archives');
 			}
-			$showyear = '<span class="month-show" id="show-'.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'" onClick="showContent(\''.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'\');"> | '.$month_show_text.'</span>';
-			$showyear .= '<span class="month-show" id="hide-'.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'" onClick="hideContent(\''.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'\')" style="display:none;"> | '.$month_hide_text.'</span>';
-			$hidemonth = ' style="display: none;"';
+			
+			if ($found_first_month && $show_first_month) {
+				$show_show_text = ' style="display:none;"';
+				$show_hide_text = '';
+				$hidemonth = '';
+				$print_month_content = 'show';
+				$args['print_month_content'] = 'show';
+			}
+			else {
+				$show_show_text = '';
+				$show_hide_text = ' style="display:none;"';
+				$hidemonth = ' style="display: none;"';
+			}
+			
+			$showyear = '<span class="month-show" id="show-'.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'" onClick="showContent(\''.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'\');"'.$show_show_text.'> | '.$month_show_text.'</span>';
+			$showyear .= '<span class="month-show" id="hide-'.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'" onClick="hideContent(\''.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'\')"'.$show_hide_text.'> | '.$month_hide_text.'</span>';
 		}
 		else {
 			$showyear = '';
@@ -1339,8 +1371,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
-	$posts = maybe_unserialize($archives[0]->option_value);
+	$posts = get_option($year.'-'.$month);
 	$content = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$showyear = '';

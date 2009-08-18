@@ -1467,7 +1467,12 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 					if (!empty($post_settings['postdate'])) {
 						$dateoutput = ' | '.$post_settings['postdate'];
 					}									
-					$content .= '<li><a href="'.$post_settings['link'].'">'.$post_settings['title'].'</a>'.$dateoutput.$authoroutput.$post_settings['showlink'].$post_settings['excerpt'].'</li>';
+					$output .= '<li><a href="'.$post_settings['link'].'">'.$post_settings['title'].'</a>'.$dateoutput.$authoroutput.$post_settings['showlink'].$post_settings['excerpt'].'</li>';
+					
+					$post_settings['dateoutput'] = $dateoutput;
+					$post_settings['authoroutput'] = $authoroutput;
+					
+					$content .= apply_filters('cfar_display_output', $output, $post_settings);
 				}
 			}
 			

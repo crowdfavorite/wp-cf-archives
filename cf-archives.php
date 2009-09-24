@@ -588,47 +588,6 @@ function cfar_add_archive($post_id) {
 			// Lets update the option now
 			update_option('cfar_year_list', $year_list);
 		}
-		
-		// Lets update the category list
-		$gbl_category_list = get_option('cfar_category_list');
-		
-		if (!is_array($gbl_category_list) || empty($gbl_category_list)) {
-			$gbl_category_list = array();
-
-			$cats = get_categories();
-			
-			// Create an array with the category ids and empty post counts
-			foreach ($cats as $cat) {
-				$gbl_category_list[$cat->term_id] = 0;
-				if (in_array($cat->term_id, $category_list)) {
-					$gbl_category_list[$cat->term_id] = array(get_the_ID());
-				}
-			}
-			
-			// Sort for easy processing
-			ksort($gbl_category_list);
-			
-			// Insert the new global category list into the DB
-			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
-			add_option('cfar_category_list', $gbl_category_list, '', 'no');
-		}
-		else {
-			// Run through the post's categories and update as needed
-			foreach ($category_list as $cat_id) {
-				if (!is_array($gbl_category_list[$cat_id])) {
-					$gbl_category_list[$cat_id] = array(get_the_ID());
-				}
-				if (!in_array(get_the_ID(), $gbl_category_list[$cat_id])) {
-					$gbl_category_list[$cat_id][] = get_the_ID();
-				}
-			}
-			
-			// Sort for easy processing
-			ksort($gbl_category_list);
-			
-			// Lets update the option now
-			update_option('cfar_category_list', $gbl_category_list);
-		}
 	}
 	
 	$post = $orig_post;

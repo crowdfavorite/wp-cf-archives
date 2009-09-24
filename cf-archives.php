@@ -470,103 +470,167 @@ function cfar_get_posts_count() {
 }
 
 function cfar_add_archive($post_id) {
-	global $wpdb;
+	global $post;
 	
-	$save_post = new WP_Query('p='.$post_id);
+	if (empty($post_id) || $post_id <= 0) { return true; }
+	
+	$post_query = '';
+	if (is_array($post_id)) {
+		$post_query = array('post__ids' => $post_id);
+	}
+	else {
+		$post_query = array('p' => $post_id);
+	}
+	
 	$orig_post = $post;
-	while($save_post->have_posts()) {
+	if (empty($post_query)) { return true; }
+	$save_post = new WP_Query($post_query);
+
+	while ($save_post->have_posts()) {
 		$save_post->the_post();
 		
 		// supply a filter to allow posts to be excluded from archiving
-		if(!apply_filters('cfar_do_archive',true, $save_post->post)) { return true; }
+		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { break; }
 		
-		if ($save_post->post->post_type == 'revision' || $save_post->post->post_status == 'draft') { break; }
-		$year = date('Y',strtotime($save_post->post->post_date));
-		$month = date('m',strtotime($save_post->post->post_date));
-		$month_string = date('M',strtotime($save_post->post->post_date));
+		// We don't need to add revisions and drafts to the archive
+		$post_status = get_post_status();
+		if ($post_status == 'revision' || $post_status == 'draft') { break; }
+		
+		$year = get_the_time('Y');
+		$month = get_the_time('m');
+		$month_string = get_the_time('M');
 		$archive_date = $year.'-'.$month;
-		$new_post = true;
 		
-		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$archive_date."'");
-		$start = maybe_unserialize($archives[0]->option_value);
-
-		$excerpt = cfar_trim_excerpt($save_post->post->post_excerpt,$save_post->post->post_content);
+		// Get the archives from the DB related to this post's date
+		$archives = get_option($archive_date);
+		$start = maybe_unserialize($archives);
+		
+		// Process Categories for addition
 		$category_list = array();
 		$categories = get_the_category();
-		foreach($categories as $category) {
-			array_push($category_list, $category->cat_ID);
+		if (is_array($categories) && !empty($categories)) {
+			foreach ($categories as $category) {
+				$category_list[] = $category->cat_ID;
+			}
 		}
-
-		$insert = array(
-			$save_post->post->post_date.'--'.$save_post->post->ID => array(
-				'id' => $save_post->post->ID,
-				'title' => $save_post->post->post_title,
-				'author' => $save_post->post->post_author,
-				'post_date' => $save_post->post->post_date,
-				'excerpt' => $excerpt,
-				'guid' => $save_post->post->guid,
-				'categories' => $category_list,
-				'status' => $save_post->post->post_status,
-			)
+		
+		// Now that we have gathered relevant info, lets build an array for insertion
+		$post_key = get_the_time('Y-m-d H:i:s').'--'.get_the_ID();
+		$insert[$post_key] = array(
+			'id' => get_the_ID(),
+			'title' => get_the_title(),
+			'author' => get_the_author_meta('id'),
+			'post_date' => get_the_time('Y-m-d H:i:s'),
+			'excerpt' => cfar_trim_excerpt(get_the_excerpt(), get_the_content()),
+			'guid' => get_the_guid(get_the_ID()),
+			'categories' => $category_list,
+			'status' => $post_status
 		);
-		if (!is_array($start)) {
-			$query = "INSERT INTO $wpdb->options (`option_id` ,`blog_id` ,`option_name` ,`option_value` ,`autoload`)VALUES (NULL , '0', '".$archive_date."', '".$wpdb->escape(serialize($insert))."', 'no');";
-			$wpdb->query($query);
+		
+		// If the archives haven't been setup for this month, add them to the DB now
+		if (!is_array($archives) || empty($archives)) {
+			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
+			add_option($archive_date, $insert, '', 'no');
 		}
 		else {
-			foreach($start as $key => $item) {
-				foreach($item as $item_key => $post_info) {
-					$check_key = $save_post->post->ID;
-					if ($post_info == $check_key) {
-						unset($start[$key]);
-						$new_post = false;
-						break;
-					}
-				}
+			// If the post is already in the archives, remove it so we can insert our updated post
+			if (isset($archives[$post_key])) {
+				unset($archives[$post_key]);
 			}
-			$result = array_merge($start,$insert);
-			ksort($result);
-			$query = "UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($result))."' WHERE option_name = '".$archive_date."'";
-			$wpdb->query($query);
+			
+			// Lets insert the post into the archives
+			$archives[$post_key] = $insert[$post_key];
+			
+			// Finally lets insert the updated archives into the DB
+			update_option($archive_date, $archives);
 		}
-		$archives_year_list = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-		$year_list = maybe_unserialize($archives_year_list[0]->option_value);
-		if (!is_array($year_list)) {
-			$yearcheck = $year.'_';
-			$new_year_list = array($yearcheck => array(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0,11=>0,12=>0));
-			$wpdb->query("INSERT INTO $wpdb->options (option_id,blog_id,option_name,option_value,autoload)VALUES (NULL,'0','year_list','".$wpdb->escape($new_year_list)."','no');");
-			foreach($new_year_list[$yearcheck] as $key => $list_month) {
-				if ($key == $month) {
-					$new_year_list[$yearcheck][$key] = $new_year_list[$yearcheck][$key] + 1;
+		
+		// Lets update the year list
+		$year_list = get_option('cfar_year_list');
+		
+		// The current year we will use in the array creation
+		$yearcheck = $year.'_';
+		
+		if (!is_array($year_list) || empty($year_list)) {
+			$year_list = array();
+			
+			// Create an array with month numbers and a base count for each month of 0 except the current posts month which needs to be incremented
+			for ($i = 1; $i <= 12; $i++) {
+				$year_list[$yearcheck][$i] = 0;
+				if ($i == intval($month)) {
+					$year_list[$yearcheck][$i]++;
 				}
 			}
-			$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($new_year_list))."' WHERE option_name = 'year_list'");
+			
+			// Insert the new year list into the DB
+			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
+			add_option('cfar_year_list', $year_list, '', 'no');
 		}
 		else {
-			if ($new_post) {
-				$yearcheck = $year.'_';
-				if (is_array($year_list[$yearcheck])) {
-					foreach($year_list[$yearcheck] as $key => $list_month) {
-						if ($key == $month) {
-							$year_list[$yearcheck][$key] = $year_list[$yearcheck][$key] + 1;
-						}
+			// Check to see if the current posts year has the post count array
+			if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
+				// Increment the proper year/month
+				$year_list[$yearcheck][intval($month)]++;
+			}
+			else {
+				// If the current posts year is empty, create the array, and increment as needed
+				for ($i = 1; $i <= 12; $i++) {
+					$year_list[$yearcheck][$i] = 0;
+					if ($i == intval($month)) {
+						$year_list[$yearcheck][$i]++;
 					}
-					$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
-				}
-				else {
-					$new_year_list = array($yearcheck => array(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0,11=>0,12=>0));
-					foreach($new_year_list[$yearcheck] as $key => $list_month) {
-						if ($key == $month) {
-							$new_year_list[$yearcheck][$key] = $new_year_list[$yearcheck][$key] + 1;
-						}
-					}
-					$insert_year_list = array_merge($year_list,$new_year_list);
-					krsort($insert_year_list);
-					$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($insert_year_list))."' WHERE option_name = 'year_list'");
 				}
 			}
+			
+			// Sort the list so the newest year is first
+			krsort($year_list);
+			
+			// Lets update the option now
+			update_option('cfar_year_list', $year_list);
+		}
+		
+		// Lets update the category list
+		$gbl_category_list = get_option('cfar_category_list');
+		
+		if (!is_array($gbl_category_list) || empty($gbl_category_list)) {
+			$gbl_category_list = array();
+
+			$cats = get_categories();
+			
+			// Create an array with the category ids and empty post counts
+			foreach ($cats as $cat) {
+				$gbl_category_list[$cat->term_id] = 0;
+				if (in_array($cat->term_id, $category_list)) {
+					$gbl_category_list[$cat->term_id] = array(get_the_ID());
+				}
+			}
+			
+			// Sort for easy processing
+			ksort($gbl_category_list);
+			
+			// Insert the new global category list into the DB
+			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
+			add_option('cfar_category_list', $gbl_category_list, '', 'no');
+		}
+		else {
+			// Run through the post's categories and update as needed
+			foreach ($category_list as $cat_id) {
+				if (!is_array($gbl_category_list[$cat_id])) {
+					$gbl_category_list[$cat_id] = array(get_the_ID());
+				}
+				if (!in_array(get_the_ID(), $gbl_category_list[$cat_id])) {
+					$gbl_category_list[$cat_id][] = get_the_ID();
+				}
+			}
+			
+			// Sort for easy processing
+			ksort($gbl_category_list);
+			
+			// Lets update the option now
+			update_option('cfar_category_list', $gbl_category_list);
 		}
 	}
+	
 	$post = $orig_post;
 	return true;
 }
@@ -759,36 +823,42 @@ function cfar_settings_form() {
 				</tbody>
 			</table>
 			</div>
-			<div style="float: left; margin: 20px;">
-			<table class="widefat" style="width: 200px; margin-top: 10px; float: left;">
-				<thead>
-					<tr>
-						<th scope="col">'.__('Year','cf-archives').'</th>
-						<th scope="col" style="text-align:center;">'.__('No Display','cf-archives').'</th>
-					</tr>
-				</thead>
-				');
-				foreach($yearlist as $year => $months) {
-					$value = '';
-					$yearoutput = str_replace('_','',$year);
+			');
+			if (is_array($yearlist) && !empty($yearlist)) {
+				print('
+				<div style="float: left; margin: 20px;">
+				<table class="widefat" style="width: 200px; margin-top: 10px; float: left;">
+					<thead>
+						<tr>
+							<th scope="col">'.__('Year','cf-archives').'</th>
+							<th scope="col" style="text-align:center;">'.__('No Display','cf-archives').'</th>
+						</tr>
+					</thead>
+					');
+					foreach($yearlist as $year => $months) {
+						$value = '';
+						$yearoutput = str_replace('_','',$year);
 					
-					if (in_array($year,$settings['exclude_years'])) {
-						$value = 'checked=checked';
+						if (in_array($year,$settings['exclude_years'])) {
+							$value = 'checked=checked';
+						}
+						print('
+						<tr>
+							<td>
+								'.$yearoutput.'
+							</td>
+							<td style="text-align:center;">
+								<input type="checkbox" name="cfar_settings[year_exclude]['.$yearoutput.']"'.$value.' />
+							</td>
+						</tr>
+						');
 					}
 					print('
-					<tr>
-						<td>
-							'.$yearoutput.'
-						</td>
-						<td style="text-align:center;">
-							<input type="checkbox" name="cfar_settings[year_exclude]['.$yearoutput.']"'.$value.' />
-						</td>
-					</tr>
-					');
-				}
-				print('
-			</table>
-			</div>
+				</table>
+				</div>
+				');
+			}
+			print('
 			<div class="clear"></div>
 			<h3>Remove Years/Months by Category</h3>
 			<table class="widefat archive-table-top">

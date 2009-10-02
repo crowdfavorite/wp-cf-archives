@@ -449,7 +449,6 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	$posts = new WP_Query(array(
 		'showposts' => $increment,
 		'offset' => $offset,
-		'post__in' => array(15)
 	));
 	
 	$post_ids = array();

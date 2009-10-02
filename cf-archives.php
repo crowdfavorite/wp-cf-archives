@@ -438,6 +438,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	global $post,$wp_query;
 	if ($offset == 0) {
 		delete_option('cfar_year_list');
+		global $wpdb;
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '19%'");
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '20%'");
 	}
@@ -962,33 +963,35 @@ function cfar_settings_form() {
 						<td style="vertical-align:middle; padding:0;">
 							');
 							$i = 0;
-							foreach ($yearlist as $year => $months) {
-								$striping = $i++%2 ? ' alternate' : NULL;
-								$yearoutput = str_replace('_','',$year);
-								print('
-									<div class="archive-category-year'.$striping.'">
-										<div class="archive-year">
-											<label>
-												<input type="checkbox" class="cfar-year-check" name="cfar_settings[category_exclude][###SECTION###][year]['.$yearoutput.']" />
-												'.$yearoutput.'
-											</label>
-										</div>
-								');
-								foreach ($months as $month => $count) {
-									$timestamp = mktime(0, 0, 0, $month, 1, $yearoutput);
-								    $month_display = date("M", $timestamp);
+							if (is_array($yearlist) && !empty($yearlist)) {
+								foreach ($yearlist as $year => $months) {
+									$striping = $i++%2 ? ' alternate' : NULL;
+									$yearoutput = str_replace('_','',$year);
 									print('
-										<div class="archive-month">
-											<label>
-												<input type="checkbox" name="cfar_settings[category_exclude][###SECTION###][yearmonth]['.$yearoutput.']['.$month.']" />
-												'.$month_display.'
-											</label>
-										</div>
+										<div class="archive-category-year'.$striping.'">
+											<div class="archive-year">
+												<label>
+													<input type="checkbox" class="cfar-year-check" name="cfar_settings[category_exclude][###SECTION###][year]['.$yearoutput.']" />
+													'.$yearoutput.'
+												</label>
+											</div>
+									');
+									foreach ($months as $month => $count) {
+										$timestamp = mktime(0, 0, 0, $month, 1, $yearoutput);
+									    $month_display = date("M", $timestamp);
+										print('
+											<div class="archive-month">
+												<label>
+													<input type="checkbox" name="cfar_settings[category_exclude][###SECTION###][yearmonth]['.$yearoutput.']['.$month.']" />
+													'.$month_display.'
+												</label>
+											</div>
+										');
+									}
+									print('
+									</div>
 									');
 								}
-								print('
-								</div>
-								');
 							}
 							print('
 							<div class="clear"></div>

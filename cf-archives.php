@@ -435,17 +435,37 @@ function cfar_rebuild_archive() {
 }
 
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
-	global $wpdb;
+	global $post,$wp_query;
 	if ($offset == 0) {
 		delete_option('cfar_year_list');
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '19%'");
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '20%'");
 	}
-	$posts = $wpdb->get_results("SELECT ID FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish' ORDER BY ID ASC LIMIT ".$offset.",".$increment);
-	foreach($posts as $post) {
-		$add_result = cfar_add_archive($post->ID);
+	
+	$old_post = $post;
+	$old_query = $wp_query;
+	
+	$posts = new WP_Query(array(
+		'showposts' => $increment,
+		'offset' => $offset,
+		'post__in' => array(15)
+	));
+	
+	$post_ids = array();
+	
+	while($posts->have_posts()) {
+		$posts->the_post();
+		$post_ids[] = get_the_ID();
+	}
+	
+	$post = $old_post;
+	$wp_query = $old_query;
+	wp_reset_query();
+	
+	foreach ($post_ids as $id) {
+		$add_result = cfar_add_archive($id);
 		if (!$add_result) {
-			echo cf_json_encode(array('result'=>false,'finished'=>false,'message'=>'Failed to complete rebuild'));
+			echo cf_json_encode(array('result'=>false,'finished'=>false,'message'=>'Failed to complete rebuild on Post ID: '.$id));
 			exit();
 		}
 	}

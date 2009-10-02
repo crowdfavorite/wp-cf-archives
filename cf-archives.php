@@ -437,6 +437,7 @@ function cfar_rebuild_archive() {
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	global $wpdb;
 	if ($offset == 0) {
+		delete_option('cfar_year_list');
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '19%'");
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '20%'");
 	}
@@ -613,8 +614,7 @@ function cfar_remove_archive($post_id) {
 		unset($start[$save_post->post->post_date.'--'.$save_post->post->ID]);
 		$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($start))."' WHERE option_name = '".$archive_date."'");
 
-		$archives_year_list = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-		$year_list = maybe_unserialize($archives_year_list[0]->option_value);
+		$year_list = get_option('cfar_year_list');
 		$yearcheck = $year.'_';
 		if (is_array($year_list[$yearcheck])) {
 			foreach($year_list[$yearcheck] as $key => $list_month) {
@@ -622,7 +622,7 @@ function cfar_remove_archive($post_id) {
 					$year_list[$yearcheck][$key] = $year_list[$yearcheck][$key] - 1;
 				}
 			}
-			$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($year_list))."' WHERE option_name = 'year_list'");
+			update_option('cfar_year_list', $year_list);
 		}
 	}
 	$post = $orig_post;
@@ -665,8 +665,7 @@ add_filter('plugin_action_links', 'cfar_plugin_action_links', 10, 2);
 function cfar_settings_form() {
 	global $wpdb;
 
-	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-	$yearlist = maybe_unserialize($archives[0]->option_value);
+	$yearlist = get_option('cfar_year_list');
 	
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	if (htmlspecialchars($settings['excerpt']) == 'yes') {
@@ -1072,8 +1071,7 @@ function cfar_get_head_list($args=null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
-	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-	$yearlist = maybe_unserialize($archives[0]->option_value);
+	$yearlist = get_option('cfar_year_list');
 	$return = '';
 	$return .= $before;
 	foreach($yearlist as $year => $months) {
@@ -1119,54 +1117,55 @@ function cfar_get_yearly_list($args=null) {
 		, 'exclude_years' => array()
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-	$yearlist = maybe_unserialize($archives[0]->option_value);
-	$settings = maybe_unserialize(get_option('cf_archives'));
+	$yearlist = get_option('cfar_year_list');
+	$settings = get_option('cf_archives');
 	
 	if (empty($exclude_years) && is_array($settings['exclude_years'])) {
 		$exclude_years = $settings['exclude_years'];
 	}
 	
 	$return .= $before;
-	foreach($yearlist as $year => $months) {
-		$yearcount = 0;
-		$yearreturn = '';
-		$yearoutput = str_replace('_','',$year);
-		if (!in_array($yearoutput, $exclude_years)) {
-			$yearreturn .= $before_year.'<a class="year-link" href="#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year.$before_monthlist;
-			foreach($months as $month => $count) {
-				$yearreturn .= $before_month;
-				$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
-				if($category != 0) {
-					$count = 0;
-					$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
-					$posts = maybe_unserialize($post_archives[0]->option_value);
-					if (is_array($posts)) {
-						foreach($posts as $post) {
-							if (is_array($post['categories']) && in_array($category,$post['categories'])) {
-								$count++;
+	if (is_array($yearlist) && !empty($yearlist)) {
+		foreach($yearlist as $year => $months) {
+			$yearcount = 0;
+			$yearreturn = '';
+			$yearoutput = str_replace('_','',$year);
+			if (!in_array($yearoutput, $exclude_years)) {
+				$yearreturn .= $before_year.'<a class="year-link" href="#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year.$before_monthlist;
+				foreach($months as $month => $count) {
+					$yearreturn .= $before_month;
+					$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
+					if($category != 0) {
+						$count = 0;
+						$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
+						$posts = maybe_unserialize($post_archives[0]->option_value);
+						if (is_array($posts)) {
+							foreach($posts as $post) {
+								if (is_array($post['categories']) && in_array($category,$post['categories'])) {
+									$count++;
+								}
 							}
 						}
 					}
+
+					if (is_array($settings['category_exclude']) && isset($settings['category_exclude']) && cfar_check_exclude($settings['category_exclude'], $category, $yearoutput, $month)) {
+						$count = 0;
+					}
+
+					if ($count > 0) {
+						$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
+					}
+					else {
+						$yearreturn .= '<span class="month-nolink">'.$month_name.'</span>';
+					}
+					$yearreturn .= $after_month;
+					$yearcount += $count;
 				}
-				
-				if (is_array($settings['category_exclude']) && isset($settings['category_exclude']) && cfar_check_exclude($settings['category_exclude'], $category, $yearoutput, $month)) {
-					$count = 0;
-				}
-				
-				if ($count > 0) {
-					$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
-				}
-				else {
-					$yearreturn .= '<span class="month-nolink">'.$month_name.'</span>';
-				}
-				$yearreturn .= $after_month;
-				$yearcount += $count;
+				$yearreturn .= $after_monthlist.$after_year;
 			}
-			$yearreturn .= $after_monthlist.$after_year;
-		}
-		if ($yearcount > 0) {
-			$return .= $yearreturn;
+			if ($yearcount > 0) {
+				$return .= $yearreturn;
+			}
 		}
 	}
 	$return .= $after;
@@ -1201,20 +1200,22 @@ function cfar_get_archive_list($args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 	
-	$yearlist = get_option('year_list');
+	$yearlist = get_option('cfar_year_list');
 	if($category != 0) {
 		$return .= '<span id="cfar-category" style="display:none;">'.$category.'</span>';
 	}
 	$first = true;
-	foreach($yearlist as $year => $months) {
-		$yearoutput = str_replace('_','',$year);
+	if (is_array($yearlist) && !empty($yearlist)) {
+		foreach($yearlist as $year => $months) {
+			$yearoutput = str_replace('_','',$year);
 
-		if ($first) {
-			$args['first_year'] = $yearoutput;
-			$first = false;
+			if ($first) {
+				$args['first_year'] = $yearoutput;
+				$first = false;
+			}
+
+			$return .= cfar_get_year_archive($yearoutput,$args);
 		}
-
-		$return .= cfar_get_year_archive($yearoutput,$args);
 	}
 	return $return;
 }
@@ -1243,39 +1244,41 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 	}
 	
 	if ($yearinput != '') {
-		$yearlist = get_option('year_list');
+		$yearlist = get_option('cfar_year_list');
 		$print = '';
 		$first = true;
-		foreach($yearlist as $year => $months) {
-			$yearcount = 0;
-			$yearoutput = str_replace('_','',$year);
+		if (is_array($yearlist) && !empty($yearlist)) {
+			foreach($yearlist as $year => $months) {
+				$yearcount = 0;
+				$yearoutput = str_replace('_','',$year);
 
-			if ($yearoutput != $first_year) {
-				$first = false;
-			}
+				if ($yearoutput != $first_year) {
+					$first = false;
+				}
 
-			if (!in_array($yearoutput, $exclude_years)) {
-				if ($yearoutput == $yearinput ) {
-					krsort($months);
-					foreach($months as $month => $count) {
-						if ($count > 0) {
-							$args['found_first_month'] = false;
-							if ($first) {
-								$first = false;
-								$args['found_first_month'] = true;
+				if (!in_array($yearoutput, $exclude_years)) {
+					if ($yearoutput == $yearinput ) {
+						krsort($months);
+						foreach($months as $month => $count) {
+							if ($count > 0) {
+								$args['found_first_month'] = false;
+								if ($first) {
+									$first = false;
+									$args['found_first_month'] = true;
+								}
+								$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
+								$yearcount++;
 							}
-							$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
-							$yearcount++;
 						}
 					}
-				}
-				if ($yearcount > 0) {
-					if (htmlspecialchars($settings['showyear']) == 'yes') {
-						$return .= '<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>';
-						$return .= $print;
-					}
-					else {
-						$return .= '<div id="_'.$yearoutput.'">'.$print.'</div>';
+					if ($yearcount > 0) {
+						if (htmlspecialchars($settings['showyear']) == 'yes') {
+							$return .= '<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>';
+							$return .= $print;
+						}
+						else {
+							$return .= '<div id="_'.$yearoutput.'">'.$print.'</div>';
+						}
 					}
 				}
 			}
@@ -1516,12 +1519,14 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 
 function cfar_check_exclude($settings, $category, $yearoutput, $month) {
 	// Filter the output from the categories by month and by year
-	foreach ($settings as $category_id => $exclude) {
-		// We don't need to worry about filtering if the categories don't match
-		if ($category_id != $category) { continue; }
-		if (is_array($exclude['excludes'][$yearoutput])) {
-			if (!empty($exclude['excludes'][$yearoutput][intval($month)])) {
-				return true;
+	if (is_array($settings) && !empty($settings)) {
+		foreach ($settings as $category_id => $exclude) {
+			// We don't need to worry about filtering if the categories don't match
+			if ($category_id != $category) { continue; }
+			if (is_array($exclude['excludes'][$yearoutput])) {
+				if (!empty($exclude['excludes'][$yearoutput][intval($month)])) {
+					return true;
+				}
 			}
 		}
 	}
@@ -1535,44 +1540,45 @@ function cfar_widget($args) {
 	$title = empty($options['title']) ? __('WP Archives','cf-archives') : apply_filters('widget_title', $options['title']);
 	echo $before_widget.$before_title.$title.$after_title;
 	
-	$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'year_list'");
-	$yearlist = maybe_unserialize($archives[0]->option_value);
-	foreach($yearlist as $year => $months) {
-		$yearoutput = str_replace('_','',$year);
-		if ($options['cfar-hidemonthly'] && $options['cfar-monthly']) {
-			$after_year = '<span class="cfar-widget-hidemonthly" onClick="showContent(\'months-'.$yearoutput.'\')"> | '.__('More','cf-archives').'</span>';
-		}
-		else {
-			$after_year = '';
-		}
-		print('<ul><li><a class="year-link" href="'.get_permalink($options['archive-id']).'#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year);
-		if ($options['cfar-monthly']) {
-			if ($options['cfar-hidemonthly']) {
-				print('<ul class="cfar-widget-month-hidden" id="months-'.$yearoutput.'">');
+	$yearlist = get_option('cfar_year_list');
+	
+	if (is_array($yearlist) && !empty($yearlist)) {
+		foreach($yearlist as $year => $months) {
+			$yearoutput = str_replace('_','',$year);
+			if ($options['cfar-hidemonthly'] && $options['cfar-monthly']) {
+				$after_year = '<span class="cfar-widget-hidemonthly" onClick="showContent(\'months-'.$yearoutput.'\')"> | '.__('More','cf-archives').'</span>';
 			}
 			else {
-				print('<ul class="cfar-widget-month">');
+				$after_year = '';
 			}
-			foreach($months as $month => $count) {
-				print('<li>');
-				$month_name = date('M', mktime(0,0,0,$month,1,$year));
-				if ($count > 0) {
-					print('<a class="month-link" href="'.get_permalink($options['archive-id']).'#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>');
+			print('<ul><li><a class="year-link" href="'.get_permalink($options['archive-id']).'#_'.$yearoutput.'">'.$yearoutput.'</a>'.$after_year);
+			if ($options['cfar-monthly']) {
+				if ($options['cfar-hidemonthly']) {
+					print('<ul class="cfar-widget-month-hidden" id="months-'.$yearoutput.'">');
 				}
 				else {
-					print('<span class="month-nolink">'.$month_name.'</span>');
+					print('<ul class="cfar-widget-month">');
 				}
-				print('</li>');
+				foreach($months as $month => $count) {
+					print('<li>');
+					$month_name = date('M', mktime(0,0,0,$month,1,$year));
+					if ($count > 0) {
+						print('<a class="month-link" href="'.get_permalink($options['archive-id']).'#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>');
+					}
+					else {
+						print('<span class="month-nolink">'.$month_name.'</span>');
+					}
+					print('</li>');
+				}
+				print('</ul>');
 			}
-			print('</ul>');
-		}
-		print('</li></ul>');
-	}
+			print('</li></ul>');
+		}	}
 	echo $after_widget;
 }
 
 function cfar_widget_control() {
-	global $wpdb;
+	global $wpdb, $post;
 	$options = $newoptions = get_option('cfar_widget');
 	if ($_POST['cfar-submit']) {
 		$newoptions['title'] = strip_tags(stripslashes($_POST['title']));
@@ -1588,7 +1594,13 @@ function cfar_widget_control() {
 	$cfar_monthly = $options['cfar-monthly'] ? 'checked="checked"' : '';
 	$cfar_hidemonthly = $options['cfar-hidemonthly'] ? 'checked="checked"' : '';
 	$cfar_archive_id = attribute_escape($options['cfar-archive-id']);
-	$pages = $wpdb->get_results("SELECT ID,post_title,post_status,post_type FROM $wpdb->posts WHERE post_status='publish' AND post_type='page' ORDER BY post_date ASC");
+	
+	$old_post = $post;
+	
+	$pages = new WP_Query(array(
+		'post_type' => 'page'
+	));
+	
 	?>
 		<p>
 			<label for="title"><?php _e('Title:','cf-archives'); ?></label><input class="widefat" id="title" name="title" type="text" value="<?php print(htmlspecialchars($title)); ?>" />
@@ -1597,16 +1609,18 @@ function cfar_widget_control() {
 			<label for="cfar-archive-id"><?php _e('Archive Page:','cf-archives'); ?></label>
 			<br />
 			<select id="cfar-archive-id" name="cfar-archive-id" class="widefat" style="width: 230px;">
+				<option value="empty"><?php _e('--Select Page--', 'cf-archives'); ?></option>
 				<?php
-				foreach($pages as $page) {
-					if ($cfar_archive_id == $page->ID) {
+				while ($pages->have_posts()) {
+					$pages->the_post();
+					
+					$selected = '';
+					if ($cfar_archive_id == get_the_ID()) {
 						$selected = ' selected=selected';
 					}
-					else {
-						$selected = '';
-					}
+
 					?>
-					<option value="<?php print(htmlspecialchars($page->ID)); ?>" <?php print($selected); ?>><?php print(htmlspecialchars($page->post_title)); ?></option>
+					<option value="<?php echo esc_attr(get_the_ID()); ?>"<?php echo $selected; ?>><?php the_title(); ?></option>
 					<?php
 				}
 				?>
@@ -1619,6 +1633,9 @@ function cfar_widget_control() {
 		</p>
 		<input type="hidden" id="cfar-submit" name="cfar-submit" value="1" />
 	<?php
+	
+	$post = $old_post;
+	wp_reset_query();
 }
 
 function cfar_widget_init() {

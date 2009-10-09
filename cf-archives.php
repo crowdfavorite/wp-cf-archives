@@ -1269,6 +1269,10 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 		$yearlist = get_option('cfar_year_list');
 		$print = '';
 		$first = true;
+
+		global $cfar_first_month_posts;
+		$cfar_first_month_posts = true;
+
 		if (is_array($yearlist) && !empty($yearlist)) {
 			foreach($yearlist as $year => $months) {
 				$yearcount = 0;
@@ -1284,8 +1288,9 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 						foreach($months as $month => $count) {
 							if ($count > 0) {
 								$args['found_first_month'] = false;
-								if ($first) {
+								if ($first || $cfar_first_month_posts) {
 									$first = false;
+									$cfar_first_month_posts = false;
 									$args['found_first_month'] = true;
 								}
 								$print .= cfar_month_get_archive($yearoutput,date('m', mktime(0,0,0,$month,1,$yearoutput)),$args);
@@ -1378,6 +1383,12 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 			$showyear = '';
 		}
 		$get_posts = cfar_get_month_posts($year,$month,$args);
+		
+		global $cfar_first_month_posts;
+		if ($get_posts['count'] == 0) {
+			$cfar_first_month_posts = true;
+		}
+		
 		if ($print_month_content == 'show' && $get_posts['content'] != '') {
 			if ($show_heads == 'show') {
 				$return .= '<h2 class="monthhead" id="_'.$year.'-'.date('n', mktime(0,0,0,$month,1,$year)).'">'.date('F', mktime(0,0,0,$month,1,$year)).' '.$year.$showyear.'</h2>';

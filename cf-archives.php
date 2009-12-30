@@ -561,7 +561,7 @@ function cfar_add_archive($post_id) {
 			
 			// Lets insert the post into the archives
 			$archives[$post_key] = $insert[$post_key];
-			
+			ksort($archives);
 			// Finally lets insert the updated archives into the DB
 			update_option($archive_date, $archives);
 		}
@@ -1213,7 +1213,7 @@ function cfar_get_archive_list($args = null) {
 		, 'print_month_content' => 'show'
 		, 'add_div' => 'show'
 		, 'add_ul' => 'show'
-		, 'newest_first' => false
+		, 'newest_first' => true
 		, 'show_excerpt' => ''
 		, 'show_year_header' => ''
 		, 'show_month_hide' => ''
@@ -1431,7 +1431,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	$defaults = array(
 		'post_show' => ''
 		, 'post_hide' => ''
-		, 'newest_first' => false
+		, 'newest_first' => true
 		, 'category' => ''
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );

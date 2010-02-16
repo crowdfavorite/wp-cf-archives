@@ -1,3 +1,16 @@
 .cfar-item-hide {
 	display:none;
 }
+
+.cfar-month-title {
+	cursor:pointer;
+}
+.cfar-month-showhide {
+	font-size:12px;
+	cursor:pointer;
+}
+.cfar-month-show {
+	
+}
+.cfar-month-hide {
+}

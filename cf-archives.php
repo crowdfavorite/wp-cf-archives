@@ -57,8 +57,17 @@ function cfar_request_handler() {
 				cfar_rebuild_archive();
 				die();
 				break;
-			case 'cfar_month_archive':
-				cfar_month_archive();
+			case 'cfar_ajax_month_archive':
+				$month = 0;
+				$year = 0;
+				if (!empty($_POST['cfar_year']) && is_numeric($_POST['cfar_year'])) {
+					$year = $_POST['cfar_year'];
+				}
+				if (!empty($_POST['cfar_month']) && is_numeric($_POST['cfar_month'])) {
+					$month = $_POST['cfar_month'];
+				}
+				cfar_ajax_month_archive($month, $year);
+				die();
 				break;
 		}
 	}
@@ -132,14 +141,23 @@ function cfar_options() {
 	<div class="wrap">
 		<?php echo screen_icon().'<h2>'.__('CF Archives', 'cfar').'</h2>'; ?>
 		<?php
-		// echo 'count: '.$cf_archives->month_posts(12, 2008).'<br />';
-		// echo $cf_archives->get_month_html(12, 2008);
 		// pp($cf_archives->get_settings());
+		// echo 'count: '.$cf_archives->month_posts(12, 2008).'<br />';
+		// $cf_archives->display(true);
+		echo 'Week Start Date: '.$cf_archives->get_week_start_date(42, 2009).'<br />';
+		echo 'Week End Date: '.$cf_archives->get_week_end_date(42, 2009).'<br />';
+		
+		echo $cf_archives->get_week_html(42, 2009);
+		/*
 		?>
 		<p class="submit" style="border-top: none;">
 			<input type="submit" name="submit" value="<?php _e('Rebuild Archive', 'cfar'); ?>" id="cfar-rebuild-button" class="button-primary" />
 			<span id="cfar-rebuild-status" class="cfar-rebuild-status updated"><img src="<?php echo CFAR_DIR_URL; ?>images/ajax-loader.gif" border="0" />Stuff here&hellip;</span>
 		</p>
+		*/ ?>
+	</div>
+	<div id="cfar-ajax-spinner" style="display:none;">
+		<img src="<?php echo CFAR_DIR_URL; ?>images/ajax-loader.gif" border="0" />
 	</div>
 	<?php
 }
@@ -149,7 +167,7 @@ function cfar_rebuild_archive() {
 	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
 		$cf_archives = new CF_Archives();
 	}
-	$result = $cf_archives->rebuild();
+	// $result = $cf_archives->rebuild();
 	// pp($)
 	// if () {
 	// 	echo 'complete';
@@ -160,7 +178,19 @@ function cfar_rebuild_archive() {
 }
 
 
+function cfar_display_archives_args($args) {
+	$args['display_month_content'] = false;
+	return $args;
+}
+add_filter('cfar-get-month-html-args', 'cfar_display_archives_args');
 
+function cfar_ajax_month_archive($month = 0, $year = 0) {
+	global $cf_archives;
+	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
+		$cf_archives = new CF_Archives();
+	}
+	echo $cf_archives->get_month_content($month, $year);
+}
 
 
 

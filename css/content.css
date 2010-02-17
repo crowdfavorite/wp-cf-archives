@@ -2,15 +2,19 @@
 	display:none;
 }
 
-.cfar-month-title {
+.cfar-month-title,
+.cfar-week-title {
 	cursor:pointer;
 }
-.cfar-month-showhide {
+.cfar-month-showhide,
+.cfar-week-showhide {
 	font-size:12px;
 	cursor:pointer;
 }
-.cfar-month-show {
+.cfar-month-show,
+.cfar-week-show {
 	
 }
-.cfar-month-hide {
+.cfar-month-hide,
+.cfar-week-hide {
 }

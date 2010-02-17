@@ -23,9 +23,10 @@ if (!defined('PLUGINDIR')) {
 	define('PLUGINDIR', 'wp-content/plugins');
 }
 
-## General Functions
-
 load_plugin_textdomain('cfar');
+
+
+## General Functions
 
 function cfar_request_handler() {
 	if (!empty($_GET['cf_action'])) {
@@ -57,16 +58,30 @@ function cfar_request_handler() {
 				cfar_rebuild_archive();
 				die();
 				break;
-			case 'cfar_ajax_month_archive':
+			case 'cfar-month-ajax-archive':
+				pp($_POST);
+				die();
 				$month = 0;
 				$year = 0;
 				if (!empty($_POST['cfar_year']) && is_numeric($_POST['cfar_year'])) {
 					$year = $_POST['cfar_year'];
 				}
-				if (!empty($_POST['cfar_month']) && is_numeric($_POST['cfar_month'])) {
-					$month = $_POST['cfar_month'];
+				if (!empty($_POST['cfar_other']) && is_numeric($_POST['cfar_other'])) {
+					$month = $_POST['cfar_other'];
 				}
-				cfar_ajax_month_archive($month, $year);
+				cfar_month_ajax_archive($month, $year);
+				die();
+				break;
+			case 'cfar-week-ajax-archive':
+				$week = 0;
+				$year = 0;
+				if (!empty($_POST['cfar_year']) && is_numeric($_POST['cfar_year'])) {
+					$year = $_POST['cfar_year'];
+				}
+				if (!empty($_POST['cfar_other']) && is_numeric($_POST['cfar_other'])) {
+					$week = $_POST['cfar_other'];
+				}
+				cfar_week_ajax_archive($week, $year);
 				die();
 				break;
 		}
@@ -79,6 +94,16 @@ function cfar_request_handler() {
 	
 }
 add_action('init', 'cfar_request_handler');
+
+function cfar_plugin_action_links($links, $file) {
+	$plugin_file = trailingslashit(basename(dirname(__FILE__))).basename(__FILE__);
+	if ($file == $plugin_file) {
+		$settings_link = '<a href="options-general.php?page=cf-archives">'.__('Settings', 'cfar').'</a>';
+		array_unshift($links, $settings_link);
+	}
+	return $links;
+}
+add_filter('plugin_action_links', 'cfar_plugin_action_links', 10, 2);
 
 
 ## CSS/JS Functions
@@ -119,6 +144,23 @@ function cfar_js() {
 	die();
 }
 
+function cfar_month_ajax_archive($month = 0, $year = 0) {
+	global $cf_archives;
+	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
+		$cf_archives = new CF_Archives();
+	}
+	echo $cf_archives->get_month_content($month, $year);
+}
+
+function cfar_week_ajax_archive($week = 0, $year = 0) {
+	global $cf_archives;
+	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
+		$cf_archives = new CF_Archives();
+	}
+	echo $cf_archives->get_week_content($week, $year);
+}
+
+
 ## Admin Functions
 
 function cfar_admin_menu() {
@@ -144,10 +186,29 @@ function cfar_options() {
 		// pp($cf_archives->get_settings());
 		// echo 'count: '.$cf_archives->month_posts(12, 2008).'<br />';
 		// $cf_archives->display(true);
-		echo 'Week Start Date: '.$cf_archives->get_week_start_date(42, 2009).'<br />';
-		echo 'Week End Date: '.$cf_archives->get_week_end_date(42, 2009).'<br />';
 		
-		echo $cf_archives->get_week_html(42, 2009);
+		$args = array(
+			'display_month_content' => false, 
+		// 	// 'exclude_year_months' => array(
+		// 	// 	2009 => array(
+		// 	// 		1,2,3,4,5,6,7,8,9,10,11,12
+		// 	// 	), 
+		// 	// 	2008 => array(
+		// 	// 		1,2,3,4,5,6,7,8,9,10,11,12
+		// 	// 	), 
+		// 	// 	2007 => array(
+		// 	// 		1,2,3,4,5,6,7,8,9,10,11,12
+		// 	// 	)
+		// 	// )
+			'exclude_years' => array(
+				2009,2008,2007
+			),
+			'exclude_categories' => array(
+				822
+			)
+		);
+		
+		echo $cf_archives->display(false, $args);
 		/*
 		?>
 		<p class="submit" style="border-top: none;">
@@ -167,30 +228,15 @@ function cfar_rebuild_archive() {
 	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
 		$cf_archives = new CF_Archives();
 	}
-	// $result = $cf_archives->rebuild();
-	// pp($)
-	// if () {
-	// 	echo 'complete';
-	// 	return;
-	// }
-	// echo 'error';
-	// return;
-}
-
-
-function cfar_display_archives_args($args) {
-	$args['display_month_content'] = false;
-	return $args;
-}
-add_filter('cfar-get-month-html-args', 'cfar_display_archives_args');
-
-function cfar_ajax_month_archive($month = 0, $year = 0) {
-	global $cf_archives;
-	if (class_exists('CF_Archives') && !is_a('CF_Archives', $cf_archives)) {
-		$cf_archives = new CF_Archives();
+	$result = $cf_archives->rebuild();
+	if ($result) {
+		echo 'complete';
+		return;
 	}
-	echo $cf_archives->get_month_content($month, $year);
+	echo 'error';
+	return;
 }
+
 
 
 

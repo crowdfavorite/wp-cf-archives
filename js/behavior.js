@@ -23,43 +23,66 @@
 		// Month Display
 		$(".cfar-month-show").live('click', function() {
 			var id = $(this).attr('id').replace('cfar-month-show-', '');
-			cfar_month_showhide(id);
+			cfar_display_showhide(id, 'cfar-month');
 			return false;
 		});
 
 		$(".cfar-month-hide").live('click', function() {
 			var id = $(this).attr('id').replace('cfar-month-hide-', '');
-			cfar_month_showhide(id);
+			cfar_display_showhide(id, 'cfar-month');
 			return false;
 		});
 		
 		$(".cfar-month-title").live('click', function() {
 			var id = $(this).attr('id').replace('cfar-month-title-', '');
-			cfar_month_showhide(id);
+			cfar_display_showhide(id, 'cfar-month');
 			return false;
 		});
 
-		cfar_month_showhide = function(id) {
-			var content = $("#cfar-month-content-wrap-"+id);
+		// Week Display
+		$(".cfar-week-show").live('click', function() {
+			var id = $(this).attr('id').replace('cfar-week-show-', '');
+			cfar_display_showhide(id, 'cfar-week');
+			return false;
+		});
+
+		$(".cfar-week-hide").live('click', function() {
+			var id = $(this).attr('id').replace('cfar-week-hide-', '');
+			cfar_display_showhide(id, 'cfar-week');
+			return false;
+		});
+		
+		$(".cfar-week-title").live('click', function() {
+			var id = $(this).attr('id').replace('cfar-week-title-', '');
+			cfar_display_showhide(id, 'cfar-week');
+			return false;
+		});
+		
+		
+		// Show/Hide function for content areas
+		cfar_display_showhide = function(id, base) {
+			var content = $("#"+base+"-content-wrap-"+id);
 			
-			$("#cfar-month-show-"+id).toggleClass('cfar-item-hide');
-			$("#cfar-month-hide-"+id).toggleClass('cfar-item-hide');
+			$("#"+base+"-show-"+id).toggleClass('cfar-item-hide');
+			$("#"+base+"-hide-"+id).toggleClass('cfar-item-hide');
 			content.slideToggle();
 
-			if (!content.hasClass('cfar-month-filled')) {
-				var monthyear = id.split("-");
-				var month = monthyear[0];
-				var year = monthyear[1];
-
+			if (!content.hasClass(base+'-filled')) {
+				var items = id.split("-");
+				var other = items[0];
+				var year = items[1];
+				var host = window.location.host;
+				var options = new Object();
+				
+				options.cf_action = base+"-ajax-archive";
+				options.cfar_year = year;
+				options.cfar_other = other;
+				
 				content.append("<div class='cfar-ajax-spinner'>"+$("#cfar-ajax-spinner").html()+"<span class='cfar-ajax-spinner-text'>Loading&hellip;</span></div>");
-				$.post("index.php", {
-					cf_action: "cfar_ajax_month_archive",
-					cfar_year: year,
-					cfar_month: month
-				}, function(data) {
+				$.post("http://"+host+"/index.php", options, function(data) {
 					$(".cfar-ajax-spinner").remove();
-					content.append(data).addClass("cfar-month-filled");
-				})
+					content.append(data).addClass(base+"-filled");
+				});
 			}
 			
 			

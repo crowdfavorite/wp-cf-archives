@@ -20,6 +20,11 @@ class CF_Archives {
 		
 	}
 	
+	/**
+	 * This function gets the post count for each month that there is a post.  It then saves those counts to the database
+	 *
+	 * @return bool - Result of the save to the options table
+	 */
 	public function rebuild() {
 		$settings = $this->get_settings();
 		
@@ -54,10 +59,21 @@ class CF_Archives {
 		return $this->save_settings($settings);
 	}
 	
+	/**
+	 * This function gets the options from the options table and returns them
+	 *
+	 * @return string|array - Value saved in the options table
+	 */
 	public function get_settings() {
 		return get_option('cf_archives');
 	}
 	
+	/**
+	 * This function takes the passed in value and saves it to the options table
+	 *
+	 * @param string|array $value - Value to update to the database
+	 * @return bool - Result of the update
+	 */
 	public function save_settings($value) {
 		if (empty($value)) { return false; }
 		return update_option('cf_archives', $value);
@@ -72,16 +88,20 @@ class CF_Archives {
 	 */
 	public function year_post_count($year = 0) {
 		// Check to see if the year is set using the get_date function
-		$year = $this->get_date($year, 'Y');
-
-		// Build the query parameters for the WP Query
-		$posts_query = array(
-			'year' => $year,
-			'showposts' => -1
-		);
-		$posts = new WP_Query($posts_query);
+		$year = zeroise($this->get_date($year, 'Y'), 4);
 		
-		return $posts->post_count;
+		$settings = $this->get_settings();
+		
+		// Use the built settings array to get the count of posts
+		if (is_array($settings['post_counts'][$year]) && !empty($settings['post_counts'][$year])) {
+			$total = 0;
+			foreach ($settings['post_counts'][$year] as $month => $count) {
+				$total += $count;
+			}
+			return $total;
+		}
+
+		return 0;
 	}
 	
 	/**
@@ -94,18 +114,17 @@ class CF_Archives {
 	 */
 	public function month_post_count($month = 0, $year = 0) {
 		// Check to see if the month and year are set using the get_date function
-		$month = $this->get_date($month, 'm');
-		$year = $this->get_date($year, 'Y');
+		$month = zeroise($this->get_date($month, 'm'), 2);
+		$year = zeroise($this->get_date($year, 'Y'), 4);
 
-		// Build the query parameters for the WP Query
-		$posts_query = array(
-			'monthnum' => $month,
-			'year' => $year,
-			'showposts' => -1
-		);
-		$posts = new WP_Query($posts_query);
-		
-		return $posts->post_count;
+		$settings = $this->get_settings();
+
+		// Use the built settings array to get the count of posts
+		if (is_array($settings['post_counts'][$year]) && !empty($settings['post_counts'][$year][$month])) {
+			return $settings['post_counts'][$year][$month];
+		}
+
+		return 0;
 	}
 	
 	/**
@@ -171,7 +190,7 @@ class CF_Archives {
 		);
 		$args = apply_filters('cfar-display-args', $args, $defaults);
 		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-		
+
 		$html = '';
 		
 		// Get this year and the first year that we have posts
@@ -179,6 +198,13 @@ class CF_Archives {
 		$first_year = $this->get_first_year_post();
 		
 		while(1) {
+			if (is_array($exclude_years) && in_array($year, $exclude_years)) { 
+				if ($year == $first_year) { 
+					break; 
+				}
+				$year--;
+				continue; 
+			}
 			$html .= $this->get_year_html($year, $args);
 			if ($year == $first_year) { break; }
 			$year--;
@@ -223,6 +249,7 @@ class CF_Archives {
 			'post_date_format'						=> get_option('date_format'),
 			'post_display_separator'				=> ' | ',
 			'exclude_year_months'					=> '', 		// Array	- Should be an array of years then an array of months ex: array(2008 => array(1,4), 2004 => array(3,9))  - 4 digit years required
+			'exclude_months'						=> '', 		// Array	- Should be an array of months ex: array(1,5,7)
 			'exclude_categories'					=> '', 		// Array	- Should be an array of category ids ex: array(1,3)
 			'exclude_tags'							=> '', 		// Array	- Should be an array of tag slugs ex: array('slug-1', 'tag-4')
 			'display_first_month'					=> false, 	// Bool		- Will display the content of the first month if true
@@ -235,7 +262,7 @@ class CF_Archives {
 		);
 		$args = apply_filters('cfar-get-year-html-args', $args, $defaults, $year);
 		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-		
+
 		$content = '';
 		$first_month = true;
 		
@@ -253,6 +280,7 @@ class CF_Archives {
 			for ($i = 12; $i >= 1; $i--) {
 				// Check to see if we are excluding this month, and if so don't process the month
 				if (is_array($exclude_year_months[$year]) && in_array($i, $exclude_year_months[$year])) { continue; }
+				if (is_array($exclude_months) && in_array($i, $exclude_months)) { continue; }
 				$content .= $this->get_month_html($i, $year, $args);
 			}
 		}
@@ -260,6 +288,7 @@ class CF_Archives {
 			for ($i = 1; $i <= 12; $i++) {
 				// Check to see if we are excluding this month, and if so don't process the month
 				if (is_array($exclude_year_months[$year]) && in_array($i, $exclude_year_months[$year])) { continue; }
+				if (is_array($exclude_months) && in_array($i, $exclude_months)) { continue; }
 				$content .= $this->get_month_html($i, $year, $args);
 			}
 		}
@@ -309,7 +338,7 @@ class CF_Archives {
 		);
 		$args = apply_filters('cfar-get-month-html-args', $args, $defaults, $month, $year);
 		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
-		
+
 		$posts_data = array();
 		
 		// Check to see if the month and year are set using the get_date function
@@ -374,6 +403,7 @@ class CF_Archives {
 
 		// Get the Post Data for the current month using the query vars
 		if (is_array($posts_query) && !empty($posts_query) && $display_month_content) {
+			pp($posts_query);
 			$posts_data = $this->get_query_posts($posts_query, $args);
 		}
 
@@ -481,7 +511,7 @@ class CF_Archives {
 			'after'									=> '</ul>',
 			'before_week'							=> '<li>',
 			'after_week'							=> '</li>',
-			'before_week_title'						=> '<h2 id="cfar-week-title-{MONTH}-{YEAR}" class="cfar-week-title">',
+			'before_week_title'						=> '<h2 id="cfar-week-title-{WEEK}-{YEAR}" class="cfar-week-title">',
 			'after_week_title'						=> '</h2>',
 			'show_week'								=> __(' | Show More', 'cfar'),
 			'hide_week'								=> __(' | Hide', 'cfar'),
@@ -555,22 +585,27 @@ class CF_Archives {
 				}
 				$week_showhide = '
 				<span id="cfar-week-show-{WEEK}-{YEAR}" class="cfar-week-showhide cfar-week-show'.$show_week_class.'">'.$show_week.'</span>
-				<span id="cfar-week-hide-{week}-{YEAR}" class="cfar-week-showhide cfar-week-hide'.$hide_week_class.'">'.$hide_week.'</span>
+				<span id="cfar-week-hide-{WEEK}-{YEAR}" class="cfar-week-showhide cfar-week-hide'.$hide_week_class.'">'.$hide_week.'</span>
 				';
 				$week_showhide = str_replace('{WEEK}', $week, str_replace('{YEAR}', $year, $week_showhide));
 			}
 			
 			$before_week_title = str_replace('{WEEK}', $week, str_replace('{YEAR}', $year, $before_week_title));
-			$week_title = '<div id="cfar-week-title-wrap-'.$week.'-'.$year.'" class="cfar-week-title-wrap">'.$before_week_title.$this->get_week_start_date($week, $year).' to '.$this->get_week_end_date($week, $year).$week_showhide.$after_week_title.'</div>';
+			$week_title = '<div id="cfar-week-title-wrap-'.$week.'-'.$year.'" class="cfar-week-title-wrap">'.$before_week_title.$this->get_start_date_from_postdata($posts_data).' to '.$this->get_end_date_from_postdata($posts_data).$week_showhide.$after_week_title.'</div>';
 		}
 		
 		// Go through the before_postlist variable and replace the {WEEK} and {YEAR} items with the week and year being displayed
 		$before_postlist = str_replace('{WEEK}', $week, str_replace('{YEAR}', $year, $before_postlist));
 		
+		$week_content_wrap_class = '';
+		if ($display_week_content) {
+			$week_content_wrap_class = ' cfar-week-filled';
+		}
+		
 		// Let's build the HTML for the month now that we have the data we need
 		$html = $before.$before_week.$week_title.'<div id="cfar-week-content-wrap-'.$week.'-'.$year.'" class="cfar-week-content-wrap'.$week_content_wrap_class.'">';
 		
-		if (is_array($posts_data) && !empty($posts_data)) {
+		if (is_array($posts_data) && !empty($posts_data) && $display_week_content) {
 			$html .= $before_postlist;
 			// Go through the built post data and display it
 			foreach ($posts_data as $post_id => $post_data) {
@@ -737,6 +772,7 @@ class CF_Archives {
 			'link' 			=> get_permalink(),
 			'author'		=> get_the_author(),
 			'postdate'		=> get_the_time($post_date_format),
+			'timestamp'		=> get_the_time('U'),
 			'categories'	=> wp_get_post_categories($post_id),
 			'tags'			=> wp_get_post_tags($post_id)
 		);
@@ -772,6 +808,7 @@ class CF_Archives {
 		}
 		$post_data = array();
 		$posts = new WP_Query($posts_query);
+
 		if ($posts->have_posts()) {
 			while($posts->have_posts()) {
 				$posts->the_post();
@@ -830,52 +867,47 @@ class CF_Archives {
 	}
 	
 	/**
-	 * This function gets the first day of the week for the week and year passed in.  The first day of the week is determined by the
-	 * start_of_week option.  If the week or year is empty, the function will get the latest week and year
+	 * This function takes post data processed from the get_post_data function, and returns the first post date from that data
 	 *
-	 * @param int $week (Optional) - Week to get date for
-	 * @param int $year (Optional) - Year to get date for
-	 * @return string - Start Date for the week/year passed in.  Date format controlled by args and date_format option
+	 * @param array $postdata - Post data processed from the get_post_data function
+	 * @return string - First Post Date from the get_post_data processed data
 	 */
-	public function get_week_start_date($week = 0, $year = 0) {
+	public function get_start_date_from_postdata($postdata = array()) {
 		$defaults = array(
 			'date_format'						=> get_option('date_format'),
 		);
 		$defaults = apply_filters('cfar-get-week-start-date-args', $defaults, $week, $year);
 		extract($defaults, EXTR_SKIP);
 		
-		$day = get_option('start_of_week');
-
-		// Check to see if the week and year are set using the get_date function
-		$week = $this->get_date($week, 'W');
-		$year = $this->get_date($year, 'Y');
+		$timestamps = array();
+		foreach ($postdata as $post_id => $data) {
+			$timestamps[] = $data['timestamp'];
+		}
+		sort($timestamps);
 		
-		return date($date_format, strtotime($year."W".$week.$day));
+		return apply_filters('cfar-get-week-start-date', date($date_format, $timestamps[0]), $postdata, $timestamps);
 	}
 
 	/**
-	 * This function gets the last day of the week for the week and year passed in.  The last day of the week is determined by the
-	 * start_of_week option.  If the week or year is empty, the function will get the latest week and year
+	 * This function takes post data processed from the get_post_data function, and returns the last post date from that data
 	 *
-	 * @param int $week (Optional) - Week to get date for
-	 * @param int $year (Optional) - Year to get date for
-	 * @return string - End Date for the week/year passed in.  Date format controlled by args and date_format option
+	 * @param array $postdata - Post data processed from the get_post_data function
+	 * @return string - Last Post Date from the get_post_data processed data
 	 */
-	public function get_week_end_date($week = 0, $year = 0) {
+	public function get_end_date_from_postdata($postdata = array()) {
 		$defaults = array(
 			'date_format'						=> get_option('date_format'),
 		);
 		$defaults = apply_filters('cfar-get-week-end-date-args', $defaults, $week, $year);
 		extract($defaults, EXTR_SKIP);
 		
-		$day = get_option('start_of_week');
-
-		// Check to see if the week and year are set using the get_date function
-		$week = $this->get_date($week, 'W');
-		$year = $this->get_date($year, 'Y');
-		$week++;
+		$timestamps = array();
+		foreach ($postdata as $post_id => $data) {
+			$timestamps[] = $data['timestamp'];
+		}
+		sort($timestamps);
 		
-		return date($date_format, strtotime($year."W".$week.$day));
+		return apply_filters('cfar-get-week-end-date', date($date_format, $timestamps[count($timestamps)-1]), $postdata, $timestamps);
 	}
 	
 }

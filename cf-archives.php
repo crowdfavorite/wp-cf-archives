@@ -86,22 +86,23 @@ function cfar_request_handler() {
 		}
 	}
 	if (!empty($_POST['cf_action'])) {
+		global $wpdb;
 		switch ($_POST['cf_action']) {
 			case 'cfar_ajax_month_archive':
 				$args = array();
 				$year = (int) $_POST['cfar_year'];
 				$month = (int) $_POST['cfar_month'];
-				$args['year_show'] = $_POST['cfar_year_show'];
-				$args['year_hide'] = $_POST['cfar_year_hide'];
-				$args['month_show'] = $_POST['cfar_month_show'];
-				$args['month_hide'] = $_POST['cfar_month_hide'];
-				$args['post_show'] = $_POST['cfar_post_show'];
-				$args['post_hide'] = $_POST['cfar_post_hide'];
-				$args['category'] = $_POST['cfar_category'];
-				$args['show_heads'] = $_POST['cfar_show_heads'];
-				$args['add_div'] = $_POST['cfar_add_div'];
-				$args['add_ul'] = $_POST['cfar_add_ul'];
-				$args['print_month_content'] = $_POST['cfar_print_month_content'];
+				$args['year_show'] = $wpdb->escape($_POST['cfar_year_show']);
+				$args['year_hide'] = $wpdb->escape($_POST['cfar_year_hide']);
+				$args['month_show'] = $wpdb->escape($_POST['cfar_month_show']);
+				$args['month_hide'] = $wpdb->escape($_POST['cfar_month_hide']);
+				$args['post_show'] = $wpdb->escape($_POST['cfar_post_show']);
+				$args['post_hide'] = $wpdb->escape($_POST['cfar_post_hide']);
+				$args['category'] = $wpdb->escape($_POST['cfar_category']);
+				$args['show_heads'] = $wpdb->escape($_POST['cfar_show_heads']);
+				$args['add_div'] = $wpdb->escape($_POST['cfar_add_div']);
+				$args['add_ul'] = $wpdb->escape($_POST['cfar_add_ul']);
+				$args['print_month_content'] = $wpdb->escape($_POST['cfar_print_month_content']);
 				cfar_month_archive($year,$month,$args);
 				die();
 				break;

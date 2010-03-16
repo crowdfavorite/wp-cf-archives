@@ -1,0 +1,5 @@
+# CF Archives Changelog
+
+## 1.2.1
+
+- Security updates to escape AJAX call parameters

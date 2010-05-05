@@ -39,3 +39,36 @@
 - When this happens, navigate to the settings screen and click the "Rebuild Archives" button
 - When the rebuild button has been clicked it is essential that the browser window stay open and on the current page until the script is complete
 - When the script is complete the area below the button will display "Archive procesing complete."
+
+### Inserting into a template
+
+Placing the following code into a template will allow you to show archives on all pages assigned that template. This code is only for an example and can be customized.
+
+	<div id="content">
+		<div id="archives">
+			<h2><?php _e('WP3 Test Archives', 'davidponder') ?></h2>
+			<?php 
+				$args = array('before'=>'<div id="archives_month">',
+							  'after'=>'</div><br />',
+							  'before_year'=>'<strong>',
+							  'after_year'=>'</strong>',
+							  'before_monthlist'=>'',
+							  'after_monthlist'=>'<br />',
+							  'before_month'=>'',
+							  'after_month'=>'');
+				if(function_exists('cfar_yearly_list')) {
+					cfar_yearly_list($args);
+				}
+				if(function_exists('cfar_archive_list')) {
+					$args = array('newest_first' => true
+								  , 'print_month_content' => 'no'
+								  , 'month_show' => 'Show Articles'
+								  , 'month_hide' => 'Hide Articles'
+								  , 'show_month_hide' => 'yes'
+								  , 'show_author' => 'yes'
+							);
+					cfar_archive_list($args); 
+				}
+			?>
+		</div>
+	</div>

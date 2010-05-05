@@ -1,5 +1,10 @@
 # CF Archives Changelog
 
+## 1.2.2
+
+- Tested successfully on WordPress 3.0
+- Updated readme with implementation code example
+
 ## 1.2.1
 
 - Security updates to escape AJAX call parameters

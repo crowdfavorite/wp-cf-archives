@@ -492,10 +492,9 @@ function cfar_get_posts_count() {
 }
 
 function cfar_add_archive($post_id) {
-	global $post;
-	
+	// If we don't have a post ID to mess with, return
 	if (empty($post_id) || $post_id <= 0) { return true; }
-	
+
 	$post_query = '';
 	if (is_array($post_id)) {
 		$post_query = array('post__ids' => $post_id);
@@ -504,13 +503,12 @@ function cfar_add_archive($post_id) {
 		$post_query = array('p' => $post_id);
 	}
 	
-	$orig_post = $post;
 	if (empty($post_query)) { return true; }
 	$save_post = new WP_Query($post_query);
 
 	while ($save_post->have_posts()) {
 		$save_post->the_post();
-		
+
 		// supply a filter to allow posts to be excluded from archiving
 		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { break; }
 		
@@ -522,10 +520,6 @@ function cfar_add_archive($post_id) {
 		$month = get_the_time('m');
 		$month_string = get_the_time('M');
 		$archive_date = $year.'-'.$month;
-		
-		// Get the archives from the DB related to this post's date
-		$archives = get_option($archive_date);
-		$start = maybe_unserialize($archives);
 		
 		// Process Categories for addition
 		$category_list = array();
@@ -548,9 +542,12 @@ function cfar_add_archive($post_id) {
 			'categories' => $category_list,
 			'status' => $post_status
 		);
-		
+
+		// Get the archives from the DB related to this post's date
+		$archives = get_option($archive_date);
+
 		// If the archives haven't been setup for this month, add them to the DB now
-		if (!is_array($archives) || empty($archives)) {
+		if ($archives === false) {
 			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
 			add_option($archive_date, $insert, '', 'no');
 		}
@@ -611,8 +608,8 @@ function cfar_add_archive($post_id) {
 			update_option('cfar_year_list', $year_list);
 		}
 	}
-	
-	$post = $orig_post;
+		
+	wp_reset_query();
 	return true;
 }
 

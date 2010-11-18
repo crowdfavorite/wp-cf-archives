@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.2.2
+Version: 1.3
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -492,10 +492,9 @@ function cfar_get_posts_count() {
 }
 
 function cfar_add_archive($post_id) {
-	global $post;
-	
+	// If we don't have a post ID to mess with, return
 	if (empty($post_id) || $post_id <= 0) { return true; }
-	
+
 	$post_query = '';
 	if (is_array($post_id)) {
 		$post_query = array('post__ids' => $post_id);
@@ -504,13 +503,12 @@ function cfar_add_archive($post_id) {
 		$post_query = array('p' => $post_id);
 	}
 	
-	$orig_post = $post;
 	if (empty($post_query)) { return true; }
 	$save_post = new WP_Query($post_query);
 
 	while ($save_post->have_posts()) {
 		$save_post->the_post();
-		
+
 		// supply a filter to allow posts to be excluded from archiving
 		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { break; }
 		
@@ -522,10 +520,6 @@ function cfar_add_archive($post_id) {
 		$month = get_the_time('m');
 		$month_string = get_the_time('M');
 		$archive_date = $year.'-'.$month;
-		
-		// Get the archives from the DB related to this post's date
-		$archives = get_option($archive_date);
-		$start = maybe_unserialize($archives);
 		
 		// Process Categories for addition
 		$category_list = array();
@@ -548,9 +542,12 @@ function cfar_add_archive($post_id) {
 			'categories' => $category_list,
 			'status' => $post_status
 		);
-		
+
+		// Get the archives from the DB related to this post's date
+		$archives = get_option($archive_date);
+
 		// If the archives haven't been setup for this month, add them to the DB now
-		if (!is_array($archives) || empty($archives)) {
+		if ($archives === false) {
 			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
 			add_option($archive_date, $insert, '', 'no');
 		}
@@ -611,34 +608,51 @@ function cfar_add_archive($post_id) {
 			update_option('cfar_year_list', $year_list);
 		}
 	}
-	
-	$post = $orig_post;
+		
+	wp_reset_query();
 	return true;
 }
-add_action('save_post', 'cfar_add_archive');
+
+function cfar_save_post($post_id, $post) {
+	if ($post->post_status != 'publish' && $post->post_status != 'trash') {
+		// If we are a post revision or any other type of non-displayed post status, we don't need to do anything
+		return; 
+	}
+	else if ($post->post_status == 'trash') {
+		// If we are a trashed post, we should remove ourselves from the archive
+		cfar_remove_archive($post_id);
+		return;
+	}
+	else {
+		// If we are a published post, we should update ourselves in the archive
+		cfar_add_archive($post_id);
+	}
+}
+add_action('save_post' , 'cfar_save_post', 10, 2);
 
 function cfar_remove_archive($post_id) {
 	global $wpdb;
-	$save_post = new WP_Query('p='.$post_id);
-	$orig_post = $post;
-	while($save_post->have_posts()) {
-		$save_post->the_post();
-		if ($save_post->post->post_type == 'revision' || $save_post->post->post_status == 'draft') { break; }
-		$year = date('Y',strtotime($save_post->post->post_date));
-		$month = date('m',strtotime($save_post->post->post_date));
-		$month_string = date('M',strtotime($save_post->post->post_date));
-		$archive_date = $year.'-'.$month;
-		$new_post = true;
-
-		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$archive_date."'");
-		$start = maybe_unserialize($archives[0]->option_value);
-		unset($start[$save_post->post->post_date.'--'.$save_post->post->ID]);
-		$wpdb->query("UPDATE $wpdb->options SET option_value = '".$wpdb->escape(serialize($start))."' WHERE option_name = '".$archive_date."'");
-
-		$year_list = get_option('cfar_year_list');
+	
+	$delete_post = get_post($post_id);
+	// If we don't have anything to work with, no need to proceed
+	if (empty($delete_post)) { return; }
+	
+	$year = date('Y',strtotime($delete_post->post_date));
+	$month = date('m',strtotime($delete_post->post_date));
+	$archive_date = $year.'-'.$month;
+	
+	// Get the archives that the post is inside of
+	$archives = get_option($archive_date, true);
+	
+	if (is_array($archives) && !empty($archives)) {
+		// Remove the post from the archives for the month and year
+		unset($archives[$delete_post->post_date.'--'.$delete_post->ID]);
+		update_option($archive_date, $archives);
+		
+		$year_list = get_option('cfar_year_list', true);
 		$yearcheck = $year.'_';
-		if (is_array($year_list[$yearcheck])) {
-			foreach($year_list[$yearcheck] as $key => $list_month) {
+		if (is_array($year_list) && !empty($year_list)) {
+			foreach ($year_list[$yearcheck] as $key => $list_month) {
 				if ($key == $month) {
 					$year_list[$yearcheck][$key] = $year_list[$yearcheck][$key] - 1;
 				}
@@ -646,7 +660,7 @@ function cfar_remove_archive($post_id) {
 			update_option('cfar_year_list', $year_list);
 		}
 	}
-	$post = $orig_post;
+	wp_reset_query();
 	return true;
 }
 add_action('delete_post', 'cfar_remove_archive');

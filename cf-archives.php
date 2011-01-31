@@ -14,34 +14,6 @@ if (!defined('PLUGINDIR')) {
 	define('PLUGINDIR', 'wp-content/plugins');
 }
 
-// README HANDLING
-	add_action('admin_init','cfar_add_readme');
-
-	/**
-	 * Enqueue the readme function
-	 */
-	function cfar_add_readme() {
-		if(function_exists('cfreadme_enqueue')) {
-			cfreadme_enqueue('cf-archives','cfar_readme');
-		}
-	}
-	
-	/**
-	 * return the contents of the links readme file
-	 * replace the image urls with full paths to this plugin install
-	 *
-	 * @return string
-	 */
-	function cfar_readme() {
-		$file = realpath(dirname(__FILE__)).'/README.txt';
-		if(is_file($file) && is_readable($file)) {
-			$markdown = file_get_contents($file);
-			$markdown = preg_replace('|!\[(.*?)\]\((.*?)\)|','![$1]('.WP_PLUGIN_URL.'/cf-archives/$2)',$markdown);
-			return $markdown;
-		}
-		return null;
-	}
-		
 load_plugin_textdomain('cf-archives');
 
 if (is_file(trailingslashit(ABSPATH.PLUGINDIR).'cf-archives.php')) {
@@ -430,6 +402,9 @@ add_action('wp_head','cfar_wp_head');
 function cfar_rebuild_archive() {
 	global $wpdb;
 	$posts = $wpdb->get_results("SELECT ID FROM $wpdb->posts WHERE post_type = 'post'");
+	
+	// Let the rest of the plugin know that we are rebuilding the archive
+	define('CFAR_REBUILDING_ARCHIVE', true);
 	foreach($posts as $post) {
 		cfar_add_archive($post->ID);
 	}
@@ -443,6 +418,9 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '19%'");
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '20%'");
 	}
+	
+	// Let the rest of the plugin know that we are rebuilding the archive
+	define('CFAR_REBUILDING_ARCHIVE', true);
 	
 	$old_post = $post;
 	$old_query = $wp_query;
@@ -492,7 +470,6 @@ function cfar_get_posts_count() {
 }
 
 function cfar_add_archive($post_id) {
-	// If we don't have a post ID to mess with, return
 	if (empty($post_id) || $post_id <= 0) { return true; }
 
 	$post_query = '';
@@ -507,6 +484,7 @@ function cfar_add_archive($post_id) {
 	$save_post = new WP_Query($post_query);
 
 	while ($save_post->have_posts()) {
+		global $post;
 		$save_post->the_post();
 
 		// supply a filter to allow posts to be excluded from archiving
@@ -515,12 +493,21 @@ function cfar_add_archive($post_id) {
 		// We don't need to add revisions and drafts to the archive
 		$post_status = get_post_status();
 		if ($post_status == 'revision' || $post_status == 'draft') { break; }
-		
+
 		$year = get_the_time('Y');
 		$month = get_the_time('m');
 		$month_string = get_the_time('M');
 		$archive_date = $year.'-'.$month;
-		
+		$full_date = get_the_time("Y-m-d H:i:s");
+		$old_full_date = get_post_meta(get_the_ID(), '_cfar_publish_date', true);
+
+		if ($old_full_date && $full_date != $old_full_date) {
+			cfar_remove_date_changed_post(get_the_ID(), $old_full_date);
+		}
+
+		// Get the archives from the DB related to this post's date
+		$archives = get_option($archive_date);
+
 		// Process Categories for addition
 		$category_list = array();
 		$categories = get_the_category();
@@ -531,21 +518,21 @@ function cfar_add_archive($post_id) {
 		}
 		
 		// Now that we have gathered relevant info, lets build an array for insertion
-		$post_key = get_the_time('Y-m-d H:i:s').'--'.get_the_ID();
+		$post_key = $full_date.'--'.get_the_ID();
 		$insert[$post_key] = array(
 			'id' => get_the_ID(),
 			'title' => get_the_title(),
 			'author' => get_the_author_meta('id'),
 			'post_date' => get_the_time('Y-m-d H:i:s'),
-			'excerpt' => cfar_trim_excerpt(get_the_excerpt(), get_the_content()),
+			'excerpt' => cfar_trim_excerpt($post->post_excerpt, $post->post_content),
 			'guid' => get_the_guid(get_the_ID()),
 			'categories' => $category_list,
 			'status' => $post_status
 		);
 
-		// Get the archives from the DB related to this post's date
-		$archives = get_option($archive_date);
-
+		delete_post_meta(get_the_ID(), '_cfar_publish_date');
+		add_post_meta(get_the_ID(), '_cfar_publish_date', $full_date, true);
+		
 		// If the archives haven't been setup for this month, add them to the DB now
 		if ($archives === false) {
 			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
@@ -608,7 +595,6 @@ function cfar_add_archive($post_id) {
 			update_option('cfar_year_list', $year_list);
 		}
 	}
-		
 	wp_reset_query();
 	return true;
 }
@@ -664,6 +650,43 @@ function cfar_remove_archive($post_id) {
 	return true;
 }
 add_action('delete_post', 'cfar_remove_archive');
+
+function cfar_remove_date_changed_post($post_id, $old_full_date) {
+	if (defined('CFAR_REBUILDING_ARCHIVE') && CFAR_REBUILDING_ARCHIVE) { return; }
+	$old_date = strtotime($old_full_date);
+	$old_year = date('Y', $old_date);
+	$old_month = date('m', $old_date);
+	$old_month_string = date('M', $old_date);
+	$old_archive_date = $old_year.'-'.$old_month;
+	$old_key = $old_full_date.'--'.$post_id;
+
+	$archives = get_option($old_archive_date);
+	
+	// If we have something to remove, remove the old post from the old archive
+	if (is_array($archives) && !empty($archives)) {
+		unset($archives[$old_key]);
+		ksort($archives);
+		update_option($old_archive_date, $archives);
+	}
+
+	// Lets update the year list
+	$year_list = get_option('cfar_year_list');
+	
+	// The current year we will use in the array creation
+	$yearcheck = $old_year.'_';
+	
+	// Check to see if the current posts year has the post count array
+	if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck]) && !empty($year_list[$yearcheck][intval($old_month)])) {
+		// Decrement the proper year/month
+		$year_list[$yearcheck][intval($old_month)]--;
+
+		// Sort the list so the newest year is first
+		krsort($year_list);
+
+		// Lets update the option now
+		update_option('cfar_year_list', $year_list);
+	}
+}
 
 function cfar_setting($option) {
 	$value = get_option($option);
@@ -1078,19 +1101,60 @@ function cfar_save_settings($settings) {
 	));
 }
 
-function cfar_trim_excerpt($excerpt,$content,$length = 250) {
-	if ($excerpt != '') { return $excerpt; }
-	if ($excerpt == '') { $excerpt = strip_tags($content); }
-	$excerpt = apply_filters('the_content', $excerpt);
-	$excerpt = strip_shortcodes($excerpt);
-	$excerpt = str_replace(']]>', ']]&gt;', $excerpt);
-	$excerpt = str_replace('[/caption]','', $excerpt);
-	$excerpt = strip_tags($excerpt);
-	if (strlen($excerpt) > $length) {
-	  $excerpt = substr($excerpt, 0, $length);
-	  $excerpt = substr($excerpt, 0, strrpos($excerpt, ' ')).'&hellip; ';
+function cfar_trim_excerpt($excerpt = '', $content = '',$length = 250) {
+	if (!empty($excerpt)) { return $excerpt; }
+	$content = str_replace(']]>', ']]&gt;', $content);
+	$content = preg_replace('/<img[^>]*>/','',$content);
+	$content = preg_replace('/\[(.*?)\]/','',$content);
+	$content = strip_tags($content);
+
+	if(strlen($content) > $length) {
+		$content = substr($content, 0, $length);
+		$content = substr($content, 0, strrpos($content, ' '));
 	}
-	return $excerpt;
+	$content = cfar_close_opened_tags($content);
+	return $content;
+}
+
+/**
+ * Function to close any opened tags in a string
+ * Makes no attempt to put them in the proper place, just makes sure that everything closes
+ *
+ * @param string $string 
+ * @return string
+ */
+function cfar_close_opened_tags($string) {
+	preg_match_all('/<(\w+)/',$string,$open_tags);
+	preg_match_all('/<\/(\w+)/',$string,$close_tags);
+
+	// if open & close match then get out quickly
+	if(count($open_tags[1]) == count($close_tags[1])) { 
+		return $string;
+	}
+
+	// log found open tags
+	$tags = array();
+	foreach($open_tags[1] as $found) {
+		if(!isset($tags[$found])) {
+			$tags[$found] = 0;
+		}
+		$tags[$found]++;
+	}
+
+	// process found close tags
+	foreach($close_tags[1] as $found) {
+		$tags[$found]--;
+		if($tags[$found] == 0) { unset($tags[$found]); }
+	}
+
+	// feeble attempt to get a semblance of order
+	$tags = array_reverse($tags,true);
+	foreach($tags as $tagname => $tag_count) {
+		if($tag_count) {
+			$string .= '</'.$tagname.'>';
+		}
+	}
+	return $string;
 }
 
 function cfar_get_head_list($args=null) {
@@ -1692,6 +1756,42 @@ function cfar_widget_init() {
 	wp_register_widget_control('cf-archives',__('CF Archives','cf-archives'),'cfar_widget_control');
 }
 add_action('init','cfar_widget_init');
+
+
+/**
+ * 
+ * Other Plugin Integration
+ * 
+ **/
+
+// README HANDLING
+add_action('admin_init','cfar_add_readme');
+
+/**
+ * Enqueue the readme function
+ */
+function cfar_add_readme() {
+	if(function_exists('cfreadme_enqueue')) {
+		cfreadme_enqueue('cf-archives','cfar_readme');
+	}
+}
+
+/**
+ * return the contents of the links readme file
+ * replace the image urls with full paths to this plugin install
+ *
+ * @return string
+ */
+function cfar_readme() {
+	$file = realpath(dirname(__FILE__)).'/README.txt';
+	if(is_file($file) && is_readable($file)) {
+		$markdown = file_get_contents($file);
+		$markdown = preg_replace('|!\[(.*?)\]\((.*?)\)|','![$1]('.WP_PLUGIN_URL.'/cf-archives/$2)',$markdown);
+		return $markdown;
+	}
+	return null;
+}
+		
 
 
 ?>

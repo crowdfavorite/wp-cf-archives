@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.4
+
+- Fixing a broken version number
+
 ## 1.3
 
 - Fixed bug with switching post between months and years

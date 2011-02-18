@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.4.1
+
+- Fixed bug with switching a post between published and scheduled
+
 ## 1.4
 
 - Fixing a broken version number

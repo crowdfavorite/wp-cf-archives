@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.4
+Version: 1.4.1
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -488,21 +488,32 @@ function cfar_add_archive($post_id) {
 		$save_post->the_post();
 
 		// supply a filter to allow posts to be excluded from archiving
-		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { break; }
+		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { continue; }
 		
 		// We don't need to add revisions and drafts to the archive
 		$post_status = get_post_status();
-		if ($post_status == 'revision' || $post_status == 'draft') { break; }
-
+		if ($post_status == 'revision' || $post_status == 'draft') { continue; }
+		
 		$year = get_the_time('Y');
 		$month = get_the_time('m');
 		$month_string = get_the_time('M');
 		$archive_date = $year.'-'.$month;
 		$full_date = get_the_time("Y-m-d H:i:s");
 		$old_full_date = get_post_meta(get_the_ID(), '_cfar_publish_date', true);
+		
+		// Check to see if we are dealing with a scheduled post
+		if ($post_status == 'future') {
+			// If we are updating a post that was once published, lets remove that post from the archives as well
+			if ($post_status == 'future' && $old_full_date) {
+				cfar_remove_old_post_from_archive(get_the_ID(), $old_full_date);
+			}
+
+			// Finally let's skip any future post so we don't have to deal with it later
+			continue;
+		}
 
 		if ($old_full_date && $full_date != $old_full_date) {
-			cfar_remove_date_changed_post(get_the_ID(), $old_full_date);
+			cfar_remove_old_post_from_archive(get_the_ID(), $old_full_date);
 		}
 
 		// Get the archives from the DB related to this post's date
@@ -600,7 +611,7 @@ function cfar_add_archive($post_id) {
 }
 
 function cfar_save_post($post_id, $post) {
-	if ($post->post_status != 'publish' && $post->post_status != 'trash') {
+	if ($post->post_status != 'publish' && $post->post_status != 'trash' && $post->post_status != 'future') {
 		// If we are a post revision or any other type of non-displayed post status, we don't need to do anything
 		return; 
 	}
@@ -651,7 +662,7 @@ function cfar_remove_archive($post_id) {
 }
 add_action('delete_post', 'cfar_remove_archive');
 
-function cfar_remove_date_changed_post($post_id, $old_full_date) {
+function cfar_remove_old_post_from_archive($post_id, $old_full_date) {
 	if (defined('CFAR_REBUILDING_ARCHIVE') && CFAR_REBUILDING_ARCHIVE) { return; }
 	$old_date = strtotime($old_full_date);
 	$old_year = date('Y', $old_date);

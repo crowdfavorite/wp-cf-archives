@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.4.2
+
+- Fixed a bug with displaying the first month's posts and it displaying the first month's posts for each year
+
 ## 1.4.1
 
 - Fixed bug with switching a post between published and scheduled

@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.4.3
+
+- Fix another bug with first month's posts
+
 ## 1.4.2
 
 - Fixed a bug with displaying the first month's posts and it displaying the first month's posts for each year

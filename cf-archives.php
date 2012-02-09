@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.4.2
+Version: 1.4.3
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -1370,6 +1370,7 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 
 				if ($yearoutput != $first_year) {
 					$first = false;
+					$cfar_first_month_posts = false;
 				}
 
 				if (!in_array($yearoutput, $exclude_years)) {

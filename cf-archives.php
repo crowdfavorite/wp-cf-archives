@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.4.4
+Version: 1.4.5
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -663,6 +663,13 @@ function cfar_remove_archive($post_id) {
 	}
 	wp_reset_query();
 	return true;
+}
+
+function cfar_delete_post($post_id) {
+	$post = get_post($post_id);
+	if (empty($post) || $post->post_status != 'publish') {
+		cfar_remove_archive($post_id);
+	}
 }
 add_action('delete_post', 'cfar_remove_archive');
 

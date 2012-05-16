@@ -1,5 +1,8 @@
 # CF Archives Changelog
 
+## 1.4.5
+- Updated "remove" functionality to respect not removing a post that wouldn't have been added to the archive, or would already have been removed.
+
 ## 1.4.4
 - Fixed a bug that was generating incorrect post counts for each archive month as post stati changed.
 

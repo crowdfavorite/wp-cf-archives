@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.4.3
+Version: 1.4.4
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -486,6 +486,10 @@ function cfar_add_archive($post_id) {
 	while ($save_post->have_posts()) {
 		global $post;
 		$save_post->the_post();
+		
+		if ($post->post_type != 'post') {
+			continue;
+		}
 
 		// supply a filter to allow posts to be excluded from archiving
 		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { continue; }
@@ -610,22 +614,18 @@ function cfar_add_archive($post_id) {
 	return true;
 }
 
-function cfar_save_post($post_id, $post) {
-	if ($post->post_status != 'publish' && $post->post_status != 'trash' && $post->post_status != 'future') {
-		// If we are a post revision or any other type of non-displayed post status, we don't need to do anything
-		return; 
-	}
-	else if ($post->post_status == 'trash') {
-		// If we are a trashed post, we should remove ourselves from the archive
+function cfar_publish_post($post_id) {
+	cfar_add_archive($post_id);
+}
+add_action('publish_post', 'cfar_publish_post', 10, 1);
+
+function cfar_post_transition_status($new_status, $old_status, $post) {
+	if ($old_status == 'publish' && $new_status != $old_status) {
+		// This is being "unpublished"
 		cfar_remove_archive($post_id);
-		return;
-	}
-	else {
-		// If we are a published post, we should update ourselves in the archive
-		cfar_add_archive($post_id);
 	}
 }
-add_action('save_post' , 'cfar_save_post', 10, 2);
+add_action('transition_post_status', 'cfar_post_transition_status', 10, 3);
 
 function cfar_remove_archive($post_id) {
 	global $wpdb;
@@ -633,6 +633,10 @@ function cfar_remove_archive($post_id) {
 	$delete_post = get_post($post_id);
 	// If we don't have anything to work with, no need to proceed
 	if (empty($delete_post)) { return; }
+	
+	if ($delete_post->post_type != 'post') {
+		return;
+	}
 	
 	$year = date('Y',strtotime($delete_post->post_date));
 	$month = date('m',strtotime($delete_post->post_date));

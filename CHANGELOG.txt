@@ -1,5 +1,8 @@
 # CF Archives Changelog
 
+## 1.4.4
+- Fixed a bug that was generating incorrect post counts for each archive month as post stati changed.
+
 ## 1.4.3
 
 - Fix another bug with first month's posts

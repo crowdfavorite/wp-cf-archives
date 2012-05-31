@@ -428,6 +428,9 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	$posts = new WP_Query(array(
 		'showposts' => $increment,
 		'offset' => $offset,
+		'post-type' => 'post',
+		'post_status' => 'publish',
+		'orderby' => 'date',
 	));
 	
 	$post_ids = array();
@@ -448,7 +451,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			exit();
 		}
 	}
-	$total_count = $increment+$offset;
+	$total_count = $offset+count($post_ids);
 	if ($total_count >= cfar_get_posts_count()) {
 		echo cf_json_encode(array('result'=>false,'finished'=>true,'message'=>true));
 	}

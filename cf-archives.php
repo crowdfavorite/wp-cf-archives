@@ -16,6 +16,43 @@ if (!defined('PLUGINDIR')) {
 
 load_plugin_textdomain('cf-archives');
 
+// Scripts/Styles
+
+function cfar_head_assets() {
+	$wpserver = get_bloginfo('url');
+	if(strpos($_SERVER['SERVER_NAME'],'www.') !== false && strpos($wpserver,'www.') === false) {
+		$wpserver = str_replace('http://','http://www.',$wpserver);
+	}
+
+	$script_data = array(
+		'wpserver' => trailingslashit($wpserver)
+	);
+
+	wp_enqueue_script('cfar-head', plugins_url('cf-archives/scripts/head.js'));
+	wp_localize_script('cfar-head', 'cfar', $script_data);
+
+	wp_enqueue_style('cfar-head', plugins_url('cf-archives/styles/head.css'));
+}
+add_action('wp_enqueue_scripts', 'cfar_head_assets');
+
+function cfar_admin_assets() {
+	$wpserver = get_bloginfo('url');
+	if(strpos($_SERVER['SERVER_NAME'],'www.') !== false && strpos($wpserver,'www.') === false) {
+		$wpserver = str_replace('http://','http://www.',$wpserver);
+	}
+
+	$script_data = array(
+		'wpserver' => trailingslashit($wpserver)
+	);
+
+	wp_enqueue_script('cfar-admin', plugins_url('cf-archives/scripts/admin.js'));
+	wp_localize_script('cfar-admin', 'cfar', $script_data);
+
+	wp_enqueue_style('cfar-admin', plugins_url('cf-archives/styles/admin.css'));
+}
+add_action('admin_enqueue_scripts', 'cfar_admin_assets');
+
+
 if (is_file(trailingslashit(ABSPATH.PLUGINDIR).'cf-archives.php')) {
 	define('CFAR_FILE', trailingslashit(ABSPATH.PLUGINDIR).'cf-archives.php');
 }
@@ -101,94 +138,19 @@ function cfar_request_handler() {
 }
 add_action('init', 'cfar_request_handler');
 
-function cfar_admin_css() {
-	header('Content-type: text/css');
-?>
-	#ajax-spinner {
-		text-align:center;
-	}
-	.archive-category-year {
-		float:left;
-		clear:left;
-		line-height:25px;
-		width:100%;
-		display:inline;
-		border-bottom: 1px solid #DFDFDF;
-		border-left: 1px solid #DFDFDF;
-	}
-	.archive-month {
-		display:block;
-		float:left;
-		padding-left:2px;
-		width:7%;		
-	}
-	.archive-year {
-		display:block;
-		float:left;
-		padding-left:2px;
-		width:7%;
-	}
-	.archive-table {
-		-moz-border-radius: 0;
-		-khtml-border-radius: 0;
-		-webkit-border-radius: 0;
-		border-radius: 0;
-	}
-	.archive-table-top {
-		-moz-border-radius-bottomleft: 0;
-		-moz-border-radius-bottomright: 0;
-		-khtml-border-radius-bottomleft: 0;
-		-khtml-border-radius-bottomright: 0;
-		-webkit-border-bottom-left-radius: 0;
-		-webkit-border-bottom-right-radius: 0;
-		border-radius-bottomleft: 0;
-		border-radius-bottomright: 0;
-	}
-	.archive-table-bottom {
-		-moz-border-radius-topleft: 0;
-		-moz-border-radius-topright: 0;
-		-khtml-border-radius-topleft: 0;
-		-khtml-border-radius-topright: 0;
-		-webkit-border-top-left-radius: 0;
-		-webkit-border-top-right-radius: 0;
-		border-radius-topleft: 0;
-		border-radius-topright: 0;
-	}
-	
-<?php
-	die();
-}
+// function cfar_admin_head() {
+// 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_admin_css" />';
+// 	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_admin_js"></script>';
+// }
+// if (isset($_GET['page']) && $_GET['page'] == basename(__FILE__)) {
+// 	add_action('admin_head', 'cfar_admin_head');
+// }
 
-function cfar_head_css() {
-	header('Content-type: text/css');
-?>
-	.month-show {
-		cursor:pointer;
-		font-size:10px;
-	}
-	.month-post-show {
-		cursor:pointer;
-	}
-	#ajax-spinner {
-		text-align: center;
-	}
-<?php
-	die();
-}
-
-function cfar_admin_head() {
-	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_admin_css" />';
-	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_admin_js"></script>';
-}
-if (isset($_GET['page']) && $_GET['page'] == basename(__FILE__)) {
-	add_action('admin_head', 'cfar_admin_head');
-}
-
-function cfar_wp_head() {
-	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_head_css" />';
-	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_head_js"></script>';
-}
-add_action('wp_head','cfar_wp_head');
+// function cfar_wp_head() {
+// 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_head_css" />';
+// 	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_head_js"></script>';
+// }
+// add_action('wp_head','cfar_wp_head');
 
 function cfar_rebuild_archive() {
 	global $wpdb;

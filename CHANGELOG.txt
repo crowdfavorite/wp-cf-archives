@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.4.6
+
+- Fixed bug that was causing the plugin to attempt to archive all posts but using a "finished" condition using a count with post_status and post_type restrictions.
+
 ## 1.4.5
 - Updated "remove" functionality to respect not removing a post that wouldn't have been added to the archive, or would already have been removed.
 

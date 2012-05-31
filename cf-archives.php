@@ -3,7 +3,7 @@
 Plugin Name: CF Archives 
 Plugin URI: http://crowdfavorite.com 
 Description: Advanced features for Archives. 
-Version: 1.4.5
+Version: 1.4.6
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -428,7 +428,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	$posts = new WP_Query(array(
 		'showposts' => $increment,
 		'offset' => $offset,
-		'post-type' => 'post',
+		'post_type' => 'post',
 		'post_status' => 'publish',
 		'orderby' => 'date',
 	));

@@ -1,46 +1,47 @@
 jQuery(function() {
 		
-	jQuery('#cfar_settings_form2').submit(function(){
+	jQuery('#cfar_settings_form2').submit(function(e){
+		jQuery('input[type=submit]', this).attr('disabled', 'disabled');
+		jQuery(this).attr("disabled", "disabled");
 		cfar_batch_rebuild_archives();
-		return false;
+		e.preventDefault();
 	});
 
 	function cfar_batch_rebuild_archives() {
 		var batch_offset = 0;
 		var batch_increment = 20;
-		var finished = false;
-		
-		params = {'cfar_rebuild_indexes':'1', 'cfar_rebuild_offset':'0'};
+
 		cfar_update_status('<div id="ajax-spinner"><img src="' + cfar.wpserver + 'wp-content/plugins/cf-archives/images/ajax-loader-large.gif" border="0" /></div><h1 style="text-align:center;">DO <strong>NOT</strong> NAVIGATE AWAY FROM THIS PAGE OR CLOSE THIS WINDOW</h1><br /><br />'+'Processing archives');
-		
+
 		// process posts
-		while(!finished) {
-			response = cfar_batch_request(batch_offset,batch_increment);
-			if (!response.result && !response.finished) {
-				cfar_update_status('Archive processing failed. Server said: ' + response.message);
-				return;
-			}
-			else if (!response.result && response.finished) {
-				cfar_update_status('Archive processing complete. You can now close or navigate away from this page.');
-				finished = true;
-			}
-			else if (response.result) {
-				cfar_update_status('<div id="ajax-spinner"><img src="' + cfar.wpserver + 'wp-content/plugins/cf-archives/images/ajax-loader-large.gif" border="0" /></div><h1 style="text-align:center;">DO <strong>NOT</strong> NAVIGATE AWAY FROM THIS PAGE OR CLOSE THIS WINDOW</h1><br /><br />'+response.message);
-				batch_offset = (batch_offset + batch_increment);
-			}
-		}
+
+		cfar_batch_request(batch_offset,batch_increment);
 	}
-	
+
 	// make a request
 	function cfar_batch_request(offset,increment) {
-		var r = jQuery.ajax({type:'GET',
-								url:'index.php',
-								dataType:'json',
-								async:false,
-								data:'cf_action=cfar_rebuild_archive_batch&cfar_batch_offset=' + offset + '&cfar_batch_increment=' + increment
-							}).responseText;
-		var j = eval( '(' + r + ')' );
-		return j;
+		jQuery.getJSON('index.php',
+			{
+				cf_action: 'cfar_rebuild_archive_batch',
+				cfar_batch_offset: offset,
+				cfar_batch_increment: increment
+			},
+			function(response) {
+				if (!response.result && !response.finished) {
+					cfar_update_status('Archive processing failed. Server said: ' + response.message);
+					jQuery('input[type=submit]', '#cfar_settings_form2').removeAttr('disabled');
+				}
+				else if (!response.result && response.finished) {
+					cfar_update_status('Archive processing complete. You can now close or navigate away from this page.');
+					jQuery('input[type=submit]', '#cfar_settings_form2').removeAttr('disabled');
+				}
+				else if (response.result) {
+					cfar_update_status('<div id="ajax-spinner"><img src="' + cfar.wpserver + 'wp-content/plugins/cf-archives/images/ajax-loader-large.gif" border="0" /></div><h1 style="text-align:center;">DO <strong>NOT</strong> NAVIGATE AWAY FROM THIS PAGE OR CLOSE THIS WINDOW</h1><br /><br />'+response.message);
+					next_offset = (offset + increment);
+					cfar_batch_request(next_offset, increment);
+				}
+			}
+		);
 	}
 	
 	// handle the building of indexes

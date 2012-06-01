@@ -76,11 +76,6 @@ function cfar_request_handler() {
 					wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
 					die();
 					break;
-				case 'cfar_rebuild_archive':
-					cfar_rebuild_archive();
-					wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&cf_message=archive_rebuilt');
-					die();
-					break;
 				case 'cfar_rebuild_archive_batch':
 					if (!is_numeric($_POST['cfar_batch_increment']) || !is_numeric($_POST['cfar_batch_offset'])) {
 						echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
@@ -117,51 +112,8 @@ function cfar_request_handler() {
 				break;
 		}
 	}
-	if (!empty($_GET['cf_action'])) {
-		switch ($_GET['cf_action']) {
-			case 'cfar_admin_js':
-				cfar_admin_js();
-				break;
-			case 'cfar_head_js':
-				cfar_head_js();
-				break;
-			case 'cfar_head_css':
-				cfar_head_css();
-				die();
-				break;
-			case 'cfar_admin_css':
-				cfar_admin_css();
-				die();
-				break;
-		}
-	}	
 }
 add_action('init', 'cfar_request_handler');
-
-// function cfar_admin_head() {
-// 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_admin_css" />';
-// 	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_admin_js"></script>';
-// }
-// if (isset($_GET['page']) && $_GET['page'] == basename(__FILE__)) {
-// 	add_action('admin_head', 'cfar_admin_head');
-// }
-
-// function cfar_wp_head() {
-// 	echo '<link rel="stylesheet" type="text/css" href="'.trailingslashit(get_bloginfo('url')).'?cf_action=cfar_head_css" />';
-// 	echo '<script type="text/javascript" src="'.trailingslashit(get_bloginfo('url')).'index.php?cf_action=cfar_head_js"></script>';
-// }
-// add_action('wp_head','cfar_wp_head');
-
-function cfar_rebuild_archive() {
-	global $wpdb;
-	$posts = $wpdb->get_results("SELECT ID FROM $wpdb->posts WHERE post_type = 'post'");
-	
-	// Let the rest of the plugin know that we are rebuilding the archive
-	define('CFAR_REBUILDING_ARCHIVE', true);
-	foreach($posts as $post) {
-		cfar_add_archive($post->ID);
-	}
-}
 
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	global $post,$wp_query;
@@ -175,37 +127,28 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	// Let the rest of the plugin know that we are rebuilding the archive
 	define('CFAR_REBUILDING_ARCHIVE', true);
 	
-	$old_post = $post;
-	$old_query = $wp_query;
-	
-	$posts = new WP_Query(array(
+	// Get posts we want to archive
+	$posts_query = new WP_Query(array(
 		'showposts' => $increment,
 		'offset' => $offset,
 		'post_type' => 'post',
 		'post_status' => 'publish',
 		'orderby' => 'date',
 	));
-	
-	$post_ids = array();
-	
-	while($posts->have_posts()) {
-		$posts->the_post();
-		$post_ids[] = get_the_ID();
-	}
-	
-	$post = $old_post;
-	$wp_query = $old_query;
-	wp_reset_query();
-	
-	foreach ($post_ids as $id) {
-		$add_result = cfar_add_archive($id);
+
+	$archived_posts_count = 0;
+	foreach ($posts_query->posts as $p) {
+		$add_result = cfar_add_archive($p);
+		$archived_posts_count++;
+
 		if (!$add_result) {
-			echo cf_json_encode(array('result'=>false,'finished'=>false,'message'=>'Failed to complete rebuild on Post ID: '.$id));
+			echo cf_json_encode(array('result'=>false,'finished'=>false,'message'=>'Failed to complete rebuild on Post ID: '.$p->ID));
 			exit();
 		}
 	}
-	$total_count = $offset+count($post_ids);
-	if ($total_count >= cfar_get_posts_count()) {
+
+	$total_archived = $offset + $archived_posts_count;
+	if ($total_archived >= cfar_get_posts_count()) {
 		echo cf_json_encode(array('result'=>false,'finished'=>true,'message'=>true));
 	}
 	else {
@@ -220,158 +163,133 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 
 function cfar_get_posts_count() {
 	global $wpdb;
-	$posts = $wpdb->get_results("SELECT ID FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish'");
-	if (!count($posts)) { return false; }
-	return count($posts);
+	return $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish'");
 }
 
-function cfar_add_archive($post_id) {
-	if (empty($post_id) || $post_id <= 0) { return true; }
+function cfar_add_archive($post) {
+	// supply a filter to allow posts to be excluded from archiving passing the full post object
+	if (!apply_filters('cfar_do_archive', true, $post)) { return true; }
+	
+	// We don't need to add revisions and drafts to the archive
+	if ($post->post_status == 'revision' || $post->post_status == 'draft') { return true; }
+	
+	$year = get_the_time('Y', $post);
+	$month = get_the_time('m', $post);
+	$month_string = get_the_time('M', $post);
+	$archive_date = $year.'-'.$month;
+	$full_date = get_the_time("Y-m-d H:i:s", $post);
+	$old_full_date = get_post_meta($post->ID, '_cfar_publish_date', true);
+	
+	// Check to see if we are dealing with a scheduled post
+	if ($post->post_status == 'future') {
+		// If we are updating a post that was once published, lets remove that post from the archives as well
+		if ($old_full_date) {
+			cfar_remove_old_post_from_archive($post->ID, $old_full_date);
+		}
 
-	$post_query = '';
-	if (is_array($post_id)) {
-		$post_query = array('post__ids' => $post_id);
+		// Finally let's skip this future post
+		return true;
 	}
-	else {
-		$post_query = array('p' => $post_id);
+
+	if ($old_full_date && $full_date != $old_full_date) {
+		cfar_remove_old_post_from_archive($post->ID, $old_full_date);
+	}
+
+	// Get the archives from the DB related to this post's date
+	$archives = get_option($archive_date);
+
+	// Process Categories for addition
+	$category_list = array();
+	$categories = wp_get_post_categories($post->ID);
+
+	if (is_array($categories) && !empty($categories)) {
+		foreach ($categories as $category) {
+			$category_list[] = $category;
+		}
 	}
 	
-	if (empty($post_query)) { return true; }
-	$save_post = new WP_Query($post_query);
+	// Now that we have gathered relevant info, lets build an array for insertion
+	$post_key = $full_date.'--'.$post->ID;
+	$insert[$post_key] = array(
+		'id' => $post->ID,
+		'title' => $post->post_title,
+		'author' => $post->post_author,
+		'post_date' => get_the_time('Y-m-d H:i:s', $post),
+		'excerpt' => cfar_trim_excerpt($post->post_excerpt, $post->post_content),
+		'guid' => $post->guid,
+		'categories' => $category_list,
+		'status' => $post->post_status
+	);
 
-	while ($save_post->have_posts()) {
-		global $post;
-		$save_post->the_post();
-		
-		if ($post->post_type != 'post') {
-			continue;
+	delete_post_meta($post->ID, '_cfar_publish_date');
+	add_post_meta($post->ID, '_cfar_publish_date', $full_date, true);
+	
+	// If the archives haven't been setup for this month, add them to the DB now
+	if ($archives === false) {
+		// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
+		add_option($archive_date, $insert, '', 'no');
+	}
+	else {
+		// If the post is already in the archives, remove it so we can insert our updated post
+		if (isset($archives[$post_key])) {
+			unset($archives[$post_key]);
 		}
-
-		// supply a filter to allow posts to be excluded from archiving
-		if (!apply_filters('cfar_do_archive', true, get_the_ID())) { continue; }
 		
-		// We don't need to add revisions and drafts to the archive
-		$post_status = get_post_status();
-		if ($post_status == 'revision' || $post_status == 'draft') { continue; }
+		// Lets insert the post into the archives
+		$archives[$post_key] = $insert[$post_key];
+		ksort($archives);
+		// Finally lets insert the updated archives into the DB
+		update_option($archive_date, $archives);
+	}
+	
+	// Lets update the year list
+	$year_list = get_option('cfar_year_list');
+	
+	// The current year we will use in the array creation
+	$yearcheck = $year.'_';
+	
+	if (!is_array($year_list) || empty($year_list)) {
+		$year_list = array();
 		
-		$year = get_the_time('Y');
-		$month = get_the_time('m');
-		$month_string = get_the_time('M');
-		$archive_date = $year.'-'.$month;
-		$full_date = get_the_time("Y-m-d H:i:s");
-		$old_full_date = get_post_meta(get_the_ID(), '_cfar_publish_date', true);
-		
-		// Check to see if we are dealing with a scheduled post
-		if ($post_status == 'future') {
-			// If we are updating a post that was once published, lets remove that post from the archives as well
-			if ($post_status == 'future' && $old_full_date) {
-				cfar_remove_old_post_from_archive(get_the_ID(), $old_full_date);
+		// Create an array with month numbers and a base count for each month of 0 except the current posts month which needs to be incremented
+		for ($i = 1; $i <= 12; $i++) {
+			$year_list[$yearcheck][$i] = 0;
+			if ($i == intval($month)) {
+				$year_list[$yearcheck][$i]++;
 			}
-
-			// Finally let's skip any future post so we don't have to deal with it later
-			continue;
-		}
-
-		if ($old_full_date && $full_date != $old_full_date) {
-			cfar_remove_old_post_from_archive(get_the_ID(), $old_full_date);
-		}
-
-		// Get the archives from the DB related to this post's date
-		$archives = get_option($archive_date);
-
-		// Process Categories for addition
-		$category_list = array();
-		$categories = get_the_category();
-		if (is_array($categories) && !empty($categories)) {
-			foreach ($categories as $category) {
-				$category_list[] = $category->cat_ID;
-			}
 		}
 		
-		// Now that we have gathered relevant info, lets build an array for insertion
-		$post_key = $full_date.'--'.get_the_ID();
-		$insert[$post_key] = array(
-			'id' => get_the_ID(),
-			'title' => get_the_title(),
-			'author' => get_the_author_meta('id'),
-			'post_date' => get_the_time('Y-m-d H:i:s'),
-			'excerpt' => cfar_trim_excerpt($post->post_excerpt, $post->post_content),
-			'guid' => get_the_guid(get_the_ID()),
-			'categories' => $category_list,
-			'status' => $post_status
-		);
-
-		delete_post_meta(get_the_ID(), '_cfar_publish_date');
-		add_post_meta(get_the_ID(), '_cfar_publish_date', $full_date, true);
-		
-		// If the archives haven't been setup for this month, add them to the DB now
-		if ($archives === false) {
-			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
-			add_option($archive_date, $insert, '', 'no');
+		// Insert the new year list into the DB
+		// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
+		add_option('cfar_year_list', $year_list, '', 'no');
+	}
+	else {
+		// Check to see if the current posts year has the post count array
+		if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
+			// Increment the proper year/month
+			$year_list[$yearcheck][intval($month)]++;
 		}
 		else {
-			// If the post is already in the archives, remove it so we can insert our updated post
-			if (isset($archives[$post_key])) {
-				unset($archives[$post_key]);
-			}
-			
-			// Lets insert the post into the archives
-			$archives[$post_key] = $insert[$post_key];
-			ksort($archives);
-			// Finally lets insert the updated archives into the DB
-			update_option($archive_date, $archives);
-		}
-		
-		// Lets update the year list
-		$year_list = get_option('cfar_year_list');
-		
-		// The current year we will use in the array creation
-		$yearcheck = $year.'_';
-		
-		if (!is_array($year_list) || empty($year_list)) {
-			$year_list = array();
-			
-			// Create an array with month numbers and a base count for each month of 0 except the current posts month which needs to be incremented
+			// If the current posts year is empty, create the array, and increment as needed
 			for ($i = 1; $i <= 12; $i++) {
 				$year_list[$yearcheck][$i] = 0;
 				if ($i == intval($month)) {
 					$year_list[$yearcheck][$i]++;
 				}
 			}
-			
-			// Insert the new year list into the DB
-			// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
-			add_option('cfar_year_list', $year_list, '', 'no');
 		}
-		else {
-			// Check to see if the current posts year has the post count array
-			if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
-				// Increment the proper year/month
-				$year_list[$yearcheck][intval($month)]++;
-			}
-			else {
-				// If the current posts year is empty, create the array, and increment as needed
-				for ($i = 1; $i <= 12; $i++) {
-					$year_list[$yearcheck][$i] = 0;
-					if ($i == intval($month)) {
-						$year_list[$yearcheck][$i]++;
-					}
-				}
-			}
-			
-			// Sort the list so the newest year is first
-			krsort($year_list);
-			
-			// Lets update the option now
-			update_option('cfar_year_list', $year_list);
-		}
+		
+		// Sort the list so the newest year is first
+		krsort($year_list);
+		
+		// Lets update the option now
+		update_option('cfar_year_list', $year_list);
 	}
-	wp_reset_query();
 	return true;
 }
 
 function cfar_publish_post($post_id) {
-	cfar_add_archive($post_id);
+	cfar_add_archive(get_post($post_id));
 }
 add_action('publish_post', 'cfar_publish_post', 10, 1);
 
@@ -1004,6 +922,7 @@ function cfar_get_yearly_list($args=null) {
 	}
 	
 	$return .= $before;
+
 	if (is_array($yearlist) && !empty($yearlist)) {
 		foreach($yearlist as $year => $months) {
 			$yearcount = 0;
@@ -1030,7 +949,6 @@ function cfar_get_yearly_list($args=null) {
 					if (is_array($settings['category_exclude']) && isset($settings['category_exclude']) && cfar_check_exclude($settings['category_exclude'], $category, $yearoutput, $month)) {
 						$count = 0;
 					}
-
 					if ($count > 0) {
 						$yearreturn .= '<a class="month-link" href="#_'.$yearoutput.'-'.$month.'">'.$month_name.'</a>';
 					}

@@ -140,10 +140,11 @@ function cfar_request_handler() {
 add_action('wp_loaded', 'cfar_request_handler');
 
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
-	global $post,$wp_query;
+	global $wpdb;
 	if ($offset == 0) {
+		$time = time();
+		file_put_contents(dirname(__FILE__)."/performance.log", "Start ========= $time\n");
 		delete_option('cfar_year_list');
-		global $wpdb;
 		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_%'");
 	}
 	
@@ -152,10 +153,12 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	
 	// Get posts we want to archive
 	$posts_query = new WP_Query(array(
-		'showposts' => $increment,
+		'posts_per_page' => $increment,
 		'offset' => $offset,
 		'post_type' => 'post',
 		'post_status' => 'publish',
+		'update_post_term_cache' => false,
+		'update_post_meta_cache' => false,
 		'orderby' => 'date',
 	));
 
@@ -181,6 +184,9 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		}
 		echo cf_json_encode(array('result'=>true,'finished'=>false,'message'=>$message));
 	}
+	$memory = memory_get_peak_usage();
+	$query_count = count($wpdb->queries);
+	file_put_contents(dirname(__FILE__)."/performance.log", "$offset -> $total_archived --- Queries - {$query_count} / Memory - {$memory}\n", FILE_APPEND);
 	exit();
 }
 

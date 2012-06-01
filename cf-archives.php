@@ -65,24 +65,48 @@ function cfar_request_handler() {
 		$blogurl = '';
 		if (is_ssl()) {
 			$blogurl = str_replace('http://','https://',get_bloginfo('wpurl'));
-	}
+		}
 		else {
 			$blogurl = get_bloginfo('wpurl');
-		}		
-		if (!empty($_POST['cf_action'])) {
-			switch ($_POST['cf_action']) {
-				case 'cfar_update_settings':
-					cfar_save_settings($_POST['cfar_settings']);
-					wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
-					die();
-					break;
+		}
+		if ($_POST) {
+			if (!empty($_POST['cf_action'])) {
+				switch ($_POST['cf_action']) {
+					case 'cfar_update_settings':
+						cfar_save_settings($_POST['cfar_settings']);
+						wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
+						die();
+						break;
+					case 'cfar_ajax_month_archive':
+						$args = array();
+						$year = (int) $_POST['cfar_year'];
+						$month = (int) $_POST['cfar_month'];
+						$args['year_show'] = $wpdb->escape($_POST['cfar_year_show']);
+						$args['year_hide'] = $wpdb->escape($_POST['cfar_year_hide']);
+						$args['month_show'] = $wpdb->escape($_POST['cfar_month_show']);
+						$args['month_hide'] = $wpdb->escape($_POST['cfar_month_hide']);
+						$args['post_show'] = $wpdb->escape($_POST['cfar_post_show']);
+						$args['post_hide'] = $wpdb->escape($_POST['cfar_post_hide']);
+						$args['category'] = $wpdb->escape($_POST['cfar_category']);
+						$args['show_heads'] = $wpdb->escape($_POST['cfar_show_heads']);
+						$args['add_div'] = $wpdb->escape($_POST['cfar_add_div']);
+						$args['add_ul'] = $wpdb->escape($_POST['cfar_add_ul']);
+						$args['print_month_content'] = $wpdb->escape($_POST['cfar_print_month_content']);
+						cfar_month_archive($year,$month,$args);
+						die();
+						break;
+				}
+			}
+		}
+		else if (!empty($_GET['cf_action'])) {
+			switch ($_GET['cf_action']) {
 				case 'cfar_rebuild_archive_batch':
-					if (!is_numeric($_POST['cfar_batch_increment']) || !is_numeric($_POST['cfar_batch_offset'])) {
+					if (!is_numeric($_GET['cfar_batch_increment']) || !is_numeric($_GET['cfar_batch_offset'])) {
 						echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
 						exit();
 					}
-					$increment = (int) $_POST['cfar_batch_increment'];
-					$offset = (int) $_POST['cfar_batch_offset'];
+					$increment = (int) $_GET['cfar_batch_increment'];
+					$offset = (int) $_GET['cfar_batch_offset'];
 					cfar_rebuild_archive_batch($increment,$offset);
 					die();
 					break;
@@ -113,7 +137,7 @@ function cfar_request_handler() {
 		}
 	}
 }
-add_action('init', 'cfar_request_handler');
+add_action('wp_loaded', 'cfar_request_handler');
 
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	global $post,$wp_query;

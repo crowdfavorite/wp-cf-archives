@@ -33,7 +33,7 @@ jQuery(function() {
 	
 	// make a request
 	function cfar_batch_request(offset,increment) {
-		var r = jQuery.ajax({type:'post',
+		var r = jQuery.ajax({type:'GET',
 								url:'index.php',
 								dataType:'json',
 								async:false,

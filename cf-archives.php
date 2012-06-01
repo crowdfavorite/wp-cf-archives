@@ -144,8 +144,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	if ($offset == 0) {
 		delete_option('cfar_year_list');
 		global $wpdb;
-		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '19%'");
-		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '20%'");
+		$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_%'");
 	}
 	
 	// Let the rest of the plugin know that we are rebuilding the archive
@@ -220,7 +219,7 @@ function cfar_add_archive($post) {
 	}
 
 	// Get the archives from the DB related to this post's date
-	$archives = get_option($archive_date);
+	$archives = get_option('cfar_arch_'.$archive_date);
 
 	// Process Categories for addition
 	$category_list = array();
@@ -251,7 +250,7 @@ function cfar_add_archive($post) {
 	// If the archives haven't been setup for this month, add them to the DB now
 	if ($archives === false) {
 		// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
-		add_option($archive_date, $insert, '', 'no');
+		add_option('cfar_arch_'.$archive_date, $insert, '', 'no');
 	}
 	else {
 		// If the post is already in the archives, remove it so we can insert our updated post
@@ -263,7 +262,7 @@ function cfar_add_archive($post) {
 		$archives[$post_key] = $insert[$post_key];
 		ksort($archives);
 		// Finally lets insert the updated archives into the DB
-		update_option($archive_date, $archives);
+		update_option('cfar_arch_'.$archive_date, $archives);
 	}
 	
 	// Lets update the year list
@@ -341,12 +340,12 @@ function cfar_remove_archive($post_id) {
 	$archive_date = $year.'-'.$month;
 	
 	// Get the archives that the post is inside of
-	$archives = get_option($archive_date, true);
+	$archives = get_option('cfar_arch_'.$archive_date, true);
 	
 	if (is_array($archives) && !empty($archives)) {
 		// Remove the post from the archives for the month and year
 		unset($archives[$delete_post->post_date.'--'.$delete_post->ID]);
-		update_option($archive_date, $archives);
+		update_option('cfar_arch_'.$archive_date, $archives);
 		
 		$year_list = get_option('cfar_year_list', true);
 		$yearcheck = $year.'_';
@@ -380,13 +379,13 @@ function cfar_remove_old_post_from_archive($post_id, $old_full_date) {
 	$old_archive_date = $old_year.'-'.$old_month;
 	$old_key = $old_full_date.'--'.$post_id;
 
-	$archives = get_option($old_archive_date);
+	$archives = get_option('cfar_arch_'.$old_archive_date);
 	
 	// If we have something to remove, remove the old post from the old archive
 	if (is_array($archives) && !empty($archives)) {
 		unset($archives[$old_key]);
 		ksort($archives);
-		update_option($old_archive_date, $archives);
+		update_option('cfar_arch_'.$old_archive_date, $archives);
 	}
 
 	// Lets update the year list
@@ -1236,7 +1235,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-	$posts = get_option($year.'-'.$month);
+	$posts = get_option('cfar_arch'.$year.'-'.$month);
 	$content = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$showyear = '';

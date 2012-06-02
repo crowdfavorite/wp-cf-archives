@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: CF Archives 
-Plugin URI: http://crowdfavorite.com 
-Description: Advanced features for Archives. 
+Plugin Name: CF Archives
+Plugin URI: http://crowdfavorite.com
+Description: Advanced features for Archives.
 Version: 1.4.6
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
@@ -113,29 +113,6 @@ function cfar_request_handler() {
 			}
 		}
 	}
-	if (!empty($_POST['cf_action'])) {
-		global $wpdb;
-		switch ($_POST['cf_action']) {
-			case 'cfar_ajax_month_archive':
-				$args = array();
-				$year = (int) $_POST['cfar_year'];
-				$month = (int) $_POST['cfar_month'];
-				$args['year_show'] = $wpdb->escape($_POST['cfar_year_show']);
-				$args['year_hide'] = $wpdb->escape($_POST['cfar_year_hide']);
-				$args['month_show'] = $wpdb->escape($_POST['cfar_month_show']);
-				$args['month_hide'] = $wpdb->escape($_POST['cfar_month_hide']);
-				$args['post_show'] = $wpdb->escape($_POST['cfar_post_show']);
-				$args['post_hide'] = $wpdb->escape($_POST['cfar_post_hide']);
-				$args['category'] = $wpdb->escape($_POST['cfar_category']);
-				$args['show_heads'] = $wpdb->escape($_POST['cfar_show_heads']);
-				$args['add_div'] = $wpdb->escape($_POST['cfar_add_div']);
-				$args['add_ul'] = $wpdb->escape($_POST['cfar_add_ul']);
-				$args['print_month_content'] = $wpdb->escape($_POST['cfar_print_month_content']);
-				cfar_month_archive($year,$month,$args);
-				die();
-				break;
-		}
-	}
 }
 add_action('wp_loaded', 'cfar_request_handler');
 
@@ -157,20 +134,88 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		'offset' => $offset,
 		'post_type' => 'post',
 		'post_status' => 'publish',
-		'update_post_term_cache' => false,
-		'update_post_meta_cache' => false,
+		'suppress_filters' => true,
 		'orderby' => 'date',
 	));
 
+	$archives = array();
+	$year_list = get_option('cfar_year_list');
+
 	$archived_posts_count = 0;
 	foreach ($posts_query->posts as $p) {
-		$add_result = cfar_add_archive($p);
-		$archived_posts_count++;
 
-		if (!$add_result) {
-			echo cf_json_encode(array('result'=>false,'finished'=>false,'message'=>'Failed to complete rebuild on Post ID: '.$p->ID));
-			exit();
+		$year = get_the_time('Y', $p);
+		$month = get_the_time('m', $p);
+		$full_date = get_the_time("Y-m-d H:i:s", $p);
+		$archive_date = $year.'-'.$month;
+		$archive_key = 'cfar_arch_'.$archive_date;
+		if (!array_key_exists($archive_key, $archives)) {
+			$archives[$archive_key] = get_option($archive_key);
 		}
+
+		update_post_meta($p->ID, '_cfar_publish_date', $full_date);
+
+		// Now that we have gathered relevant info, lets build an array for insertion
+		$p_key = $full_date.'--'.$p->ID;
+		$insert = array(
+			'id' => $p->ID,
+			'title' => $p->post_title,
+			'author' => $p->post_author,
+			'post_date' => get_the_time('Y-m-d H:i:s', $p),
+			'excerpt' => cfar_trim_excerpt($p->post_excerpt, $p->post_content),
+			'guid' => $p->guid,
+			'categories' => wp_get_post_categories($p->ID),
+			'status' => $p->post_status
+		);
+
+		if ($archives[$archive_key] === false) {
+			$archives[$archive_key] = array();
+			$archives[$archive_key][$p_key] = $insert;
+		}
+		else {
+			$archives[$archive_key][$p_key] = $insert;
+		}
+		// Update year list
+		$yearcheck = $year . '_';
+		if (!is_array($year_list) || empty($year_list)) {
+			$year_list = array();
+			
+			// Create an array with month numbers and a base count for each month of 0 except the current posts month which needs to be incremented
+			for ($i = 1; $i <= 12; $i++) {
+				$year_list[$yearcheck][$i] = 0;
+				if ($i == intval($month)) {
+					$year_list[$yearcheck][$i]++;
+				}
+			}
+		}
+		else {
+			// Check to see if the current posts year has the post count array
+			if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
+				// Increment the proper year/month
+				$year_list[$yearcheck][intval($month)]++;
+			}
+			else {
+				// If the current posts year is empty, create the array, and increment as needed
+				$year_list[$yearcheck] = array();
+				for ($i = 1; $i <= 12; $i++) {
+					$year_list[$yearcheck][$i] = 0;
+					if ($i == intval($month)) {
+						$year_list[$yearcheck][$i]++;
+					}
+				}
+			}
+			// Sort the list so the newest year is first
+			krsort($year_list);
+		}
+		$archived_posts_count++;
+	}
+
+	// Lets update the options now
+	update_option('cfar_year_list', $year_list);
+
+	ksort($archives);
+	foreach($archives as $archive_key => $a) {
+		update_option($archive_key, $a);
 	}
 
 	$total_archived = $offset + $archived_posts_count;
@@ -225,7 +270,7 @@ function cfar_add_archive($post) {
 	}
 
 	// Get the archives from the DB related to this post's date
-	$archives = get_option('cfar_arch_'.$archive_date);
+	$archives = get_option($archive_date);
 
 	// Process Categories for addition
 	$category_list = array();
@@ -256,7 +301,7 @@ function cfar_add_archive($post) {
 	// If the archives haven't been setup for this month, add them to the DB now
 	if ($archives === false) {
 		// NOTE: Autoload has been set to no so this does not get loaded into the WP cache, which could overwhelm it
-		add_option('cfar_arch_'.$archive_date, $insert, '', 'no');
+		add_option($archive_date, $insert, '', 'no');
 	}
 	else {
 		// If the post is already in the archives, remove it so we can insert our updated post
@@ -268,7 +313,7 @@ function cfar_add_archive($post) {
 		$archives[$post_key] = $insert[$post_key];
 		ksort($archives);
 		// Finally lets insert the updated archives into the DB
-		update_option('cfar_arch_'.$archive_date, $archives);
+		update_option($archive_date, $archives);
 	}
 	
 	// Lets update the year list
@@ -346,12 +391,12 @@ function cfar_remove_archive($post_id) {
 	$archive_date = $year.'-'.$month;
 	
 	// Get the archives that the post is inside of
-	$archives = get_option('cfar_arch_'.$archive_date, true);
+	$archives = get_option($archive_date, true);
 	
 	if (is_array($archives) && !empty($archives)) {
 		// Remove the post from the archives for the month and year
 		unset($archives[$delete_post->post_date.'--'.$delete_post->ID]);
-		update_option('cfar_arch_'.$archive_date, $archives);
+		update_option($archive_date, $archives);
 		
 		$year_list = get_option('cfar_year_list', true);
 		$yearcheck = $year.'_';
@@ -385,13 +430,13 @@ function cfar_remove_old_post_from_archive($post_id, $old_full_date) {
 	$old_archive_date = $old_year.'-'.$old_month;
 	$old_key = $old_full_date.'--'.$post_id;
 
-	$archives = get_option('cfar_arch_'.$old_archive_date);
+	$archives = get_option($old_archive_date);
 	
 	// If we have something to remove, remove the old post from the old archive
 	if (is_array($archives) && !empty($archives)) {
 		unset($archives[$old_key]);
 		ksort($archives);
-		update_option('cfar_arch_'.$old_archive_date, $archives);
+		update_option($old_archive_date, $archives);
 	}
 
 	// Lets update the year list
@@ -515,11 +560,11 @@ function cfar_settings_form() {
 				<tbody>
 					<tr>
 						<td style="vertical-align: middle;">
-							<p>	
+							<p>    
 								'.__('Show Post Preview: ','cf-archives').'
 							</p>
 							<p>
-								'.__('When set to "Yes," this will show a link to show/hide the preview for each post.','cf-archives').'								
+								'.__('When set to "Yes," this will show a link to show/hide the preview for each post.','cf-archives').'                                                               
 							</p>
 						</td>
 						<td style="text-align: center; vertical-align: middle;">
@@ -535,7 +580,7 @@ function cfar_settings_form() {
 								'.__('Show Year Header: ','cf-archives').'
 							</p>
 							<p>
-								'.__('When set to "Yes," this will show the year header for each year.','cf-archives').'								
+								'.__('When set to "Yes," this will show the year header for each year.','cf-archives').'                                                               
 							</p>
 						</td>
 						<td style="text-align: center; vertical-align: middle;">
@@ -680,7 +725,7 @@ function cfar_settings_form() {
 					');
 				}
 				print('
-				</tbody>			
+				</tbody>                       
 			</table>
 			<div id="cfar-categories">
 			</div>
@@ -761,7 +806,7 @@ function cfar_settings_form() {
 					</tr>
 				</tbody>
 			</table>
-		</div>		
+		</div>         
 	</div>
 	');
 }
@@ -845,7 +890,7 @@ function cfar_trim_excerpt($excerpt = '', $content = '',$length = 250) {
  * Function to close any opened tags in a string
  * Makes no attempt to put them in the proper place, just makes sure that everything closes
  *
- * @param string $string 
+ * @param string $string
  * @return string
  */
 function cfar_close_opened_tags($string) {
@@ -853,7 +898,7 @@ function cfar_close_opened_tags($string) {
 	preg_match_all('/<\/(\w+)/',$string,$close_tags);
 
 	// if open & close match then get out quickly
-	if(count($open_tags[1]) == count($close_tags[1])) { 
+	if(count($open_tags[1]) == count($close_tags[1])) {
 		return $string;
 	}
 
@@ -1241,7 +1286,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-	$posts = get_option('cfar_arch'.$year.'-'.$month);
+	$posts = get_option($year.'-'.$month);
 	$content = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$showyear = '';
@@ -1285,7 +1330,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 			$postdate = '';
 			$excerpt = '';
 			
-			if ($category != 0) {				
+			if ($category != 0) {                          
 				if (is_array($post['categories']) && in_array($category,$post['categories'])) {
 					if ($print_month_content == 'show') {
 						$category_ID = $post['categories'];
@@ -1308,7 +1353,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 					$postdate = date('M j, Y',strtotime($post['post_date']));
 					if (htmlspecialchars($settings['excerpt']) == 'yes') {
 						$excerpt = '<br /><div id="post-'.$post['id'].'" class="postexcerpt" style="display: none;">'.$post['excerpt'].'</div>';
-					}					
+					}                                      
 				}
 				$post_count++;
 			}
@@ -1336,7 +1381,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 					}
 					if (!empty($post_settings['postdate'])) {
 						$dateoutput = ' | '.$post_settings['postdate'];
-					}									
+					}                                                                      
 					$output = '<li><a href="'.$post_settings['link'].'">'.$post_settings['title'].'</a>'.$dateoutput.$authoroutput.$post_settings['showlink'].$post_settings['excerpt'].'</li>';
 					
 					$post_settings['dateoutput'] = $dateoutput;
@@ -1372,7 +1417,7 @@ function cfar_check_exclude($settings, $category, $yearoutput, $month) {
 }
 
 function cfar_widget($args) {
-	global $wpdb;	
+	global $wpdb;  
 	extract($args);
 	$options = get_option('cfar_widget');
 	$title = empty($options['title']) ? __('WP Archives','cf-archives') : apply_filters('widget_title', $options['title']);
@@ -1411,7 +1456,7 @@ function cfar_widget($args) {
 				print('</ul>');
 			}
 			print('</li></ul>');
-		}	}
+		}       }
 	echo $after_widget;
 }
 
@@ -1485,9 +1530,9 @@ add_action('init','cfar_widget_init');
 
 
 /**
- * 
+ *
  * Other Plugin Integration
- * 
+ *
  **/
 
 // README HANDLING

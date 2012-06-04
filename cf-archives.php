@@ -139,7 +139,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	));
 
 	$archives = array();
-	$year_list = get_option('cfar_year_list');
+	$year_list = array();
 
 	$archived_posts_count = 0;
 	foreach ($posts_query->posts as $p) {
@@ -175,38 +175,25 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		else {
 			$archives[$archive_key][$p_key] = $insert;
 		}
+
 		// Update year list
 		$yearcheck = $year . '_';
-		if (!is_array($year_list) || empty($year_list)) {
-			$year_list = array();
 
-			// Create an array with month numbers and a base count for each month of 0 except the current posts month which needs to be incremented
-			for ($i = 1; $i <= 12; $i++) {
-				$year_list[$yearcheck][$i] = 0;
-				if ($i == intval($month)) {
-					$year_list[$yearcheck][$i]++;
-				}
-			}
+		// Check to see if the current posts year has the post count array
+		if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
+			// Increment the proper year/month
+			$year_list[$yearcheck][intval($month)]++;
 		}
 		else {
-			// Check to see if the current posts year has the post count array
-			if (is_array($year_list[$yearcheck]) && !empty($year_list[$yearcheck])) {
-				// Increment the proper year/month
-				$year_list[$yearcheck][intval($month)]++;
+			// If the current posts year is empty, create the array, and increment as needed
+			$year_list[$yearcheck] = array();
+			for ($i = 1; $i <= 12; $i++) {
+				$year_list[$yearcheck][$i] = 0;
 			}
-			else {
-				// If the current posts year is empty, create the array, and increment as needed
-				$year_list[$yearcheck] = array();
-				for ($i = 1; $i <= 12; $i++) {
-					$year_list[$yearcheck][$i] = 0;
-					if ($i == intval($month)) {
-						$year_list[$yearcheck][$i]++;
-					}
-				}
-			}
-			// Sort the list so the newest year is first
-			krsort($year_list);
+			$year_list[$yearcheck][intval($month)]++;
 		}
+		// Sort the list so the newest year is first
+		krsort($year_list);
 		$archived_posts_count++;
 	}
 

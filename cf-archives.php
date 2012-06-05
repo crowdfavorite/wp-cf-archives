@@ -163,6 +163,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			'id' => $p->ID,
 			'title' => $p->post_title,
 			'author' => $p->post_author,
+			'link' => get_permalink($post->ID),
 			'post_date' => get_the_time('Y-m-d H:i:s', $p),
 			'excerpt' => cfar_trim_excerpt($p->post_excerpt, $p->post_content),
 			'guid' => $p->guid,
@@ -170,7 +171,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			'status' => $p->post_status
 		);
 
-		$post_settings = apply_filters('cfar_archive_post', $post_settings);
+		$insert = apply_filters('cfar_archive_post', $insert);
 
 		if ($archives[$archive_key] === false) {
 			$archives[$archive_key] = array();
@@ -279,6 +280,7 @@ function cfar_add_archive($post) {
 		'id' => $post->ID,
 		'title' => $post->post_title,
 		'author' => $post->post_author,
+		'link' => get_permalink($post->ID),
 		'post_date' => get_the_time('Y-m-d H:i:s', $post),
 		'excerpt' => cfar_trim_excerpt($post->post_excerpt, $post->post_content),
 		'guid' => $post->guid,
@@ -286,7 +288,7 @@ function cfar_add_archive($post) {
 		'status' => $post->post_status
 	);
 
-	$post_settings = apply_filters('cfar_archive_post', $post_settings);
+	$insert[$post_key] = apply_filters('cfar_archive_post', $insert[$post_key]);
 
 	delete_post_meta($post->ID, '_cfar_publish_date');
 	add_post_meta($post->ID, '_cfar_publish_date', $full_date, true);
@@ -1325,7 +1327,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 				if (is_array($post['categories']) && in_array($category,$post['categories'])) {
 					if ($print_month_content == 'show') {
 						$category_ID = $post['categories'];
-						$link = get_permalink($post['id']);
+						$link = $post['link'];
 						$title = $post['title'];
 						$author = $author_info->display_name;
 						$postdate = date('M j, Y',strtotime($post['post_date']));
@@ -1338,7 +1340,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 			}
 			else {
 				if ($print_month_content == 'show') {
-					$link = get_permalink($post['id']);
+					$link = $post['link'];
 					$title = $post['title'];
 					$author = $author_info->display_name;
 					$postdate = date('M j, Y',strtotime($post['post_date']));

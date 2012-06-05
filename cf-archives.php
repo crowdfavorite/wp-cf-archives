@@ -170,6 +170,8 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			'status' => $p->post_status
 		);
 
+		$post_settings = apply_filters('cfar_archive_post', $post_settings);
+
 		if ($archives[$archive_key] === false) {
 			$archives[$archive_key] = array();
 			$archives[$archive_key][$p_key] = $insert;
@@ -283,6 +285,8 @@ function cfar_add_archive($post) {
 		'categories' => $category_list,
 		'status' => $post->post_status
 	);
+
+	$post_settings = apply_filters('cfar_archive_post', $post_settings);
 
 	delete_post_meta($post->ID, '_cfar_publish_date');
 	add_post_meta($post->ID, '_cfar_publish_date', $full_date, true);
@@ -998,8 +1002,7 @@ function cfar_get_yearly_list($args=null) {
 					$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
 					if($category != 0) {
 						$count = 0;
-						$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
-						$posts = maybe_unserialize($post_archives[0]->option_value);
+						$posts = get_option("cfar_arch_".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput)));
 						if (is_array($posts)) {
 							foreach($posts as $post) {
 								if (is_array($post['categories']) && in_array($category,$post['categories'])) {
@@ -1174,8 +1177,7 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 
 	if ($year != '' && $month != '') {
 		$return = '';
-		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_".$year."-".$month."' ORDER BY option_name DESC");
-		$posts = maybe_unserialize($archives[0]->option_value);
+		$posts = get_option("cfar_arch_".$year."-".$month);
 		$content = '';
 		$settings = maybe_unserialize(get_option('cf_archives'));
 
@@ -1275,7 +1277,7 @@ function cfar_get_month_posts($year='',$month='',$args = null) {
 	);
 	extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-	$posts = get_option($year.'-'.$month);
+	$posts = get_option('cfar_arch_'.$year.'-'.$month);
 	$content = '';
 	$settings = maybe_unserialize(get_option('cf_archives'));
 	$showyear = '';

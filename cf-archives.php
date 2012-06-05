@@ -138,8 +138,10 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		'orderby' => 'date',
 	));
 
+	$year_list = get_option('cfar_year_list');
+	$year_list = is_array($year_list) ? $year_list : array();
 	$archives = array();
-	$year_list = array();
+	// TODO - solve issue with batches that cross months
 
 	$archived_posts_count = 0;
 	foreach ($posts_query->posts as $p) {
@@ -200,8 +202,8 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	// Lets update the options now
 	update_option('cfar_year_list', $year_list);
 
-	ksort($archives);
 	foreach($archives as $archive_key => $a) {
+		ksort($a);
 		update_option($archive_key, $a);
 	}
 
@@ -996,7 +998,7 @@ function cfar_get_yearly_list($args=null) {
 					$month_name = date($month_php_format, mktime(0,0,0,$month,1,$yearoutput));
 					if($category != 0) {
 						$count = 0;
-						$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
+						$post_archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_".$yearoutput."-".date('m', mktime(0,0,0,$month,1,$yearoutput))."' ORDER BY option_name DESC");
 						$posts = maybe_unserialize($post_archives[0]->option_value);
 						if (is_array($posts)) {
 							foreach($posts as $post) {
@@ -1172,7 +1174,7 @@ function cfar_month_get_archive($year='',$month='',$args = null) {
 
 	if ($year != '' && $month != '') {
 		$return = '';
-		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE '".$year."-".$month."' ORDER BY option_name DESC");
+		$archives = $wpdb->get_results("SELECT option_value FROM $wpdb->options WHERE option_name LIKE 'cfar_arch_".$year."-".$month."' ORDER BY option_name DESC");
 		$posts = maybe_unserialize($archives[0]->option_value);
 		$content = '';
 		$settings = maybe_unserialize(get_option('cf_archives'));

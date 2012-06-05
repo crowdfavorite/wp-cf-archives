@@ -72,6 +72,16 @@ function cfar_request_handler() {
 		if ($_POST) {
 			if (!empty($_POST['cf_action'])) {
 				switch ($_POST['cf_action']) {
+					case 'cfar_rebuild_archive_batch':
+						if (!is_numeric($_POST['cfar_batch_increment']) || !is_numeric($_POST['cfar_batch_offset'])) {
+							echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
+							exit();
+						}
+						$increment = (int) $_POST['cfar_batch_increment'];
+						$offset = (int) $_POST['cfar_batch_offset'];
+						cfar_rebuild_archive_batch($increment,$offset);
+						die();
+						break;
 					case 'cfar_update_settings':
 						cfar_save_settings($_POST['cfar_settings']);
 						wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
@@ -100,16 +110,6 @@ function cfar_request_handler() {
 		}
 		else if (!empty($_GET['cf_action'])) {
 			switch ($_GET['cf_action']) {
-				case 'cfar_rebuild_archive_batch':
-					if (!is_numeric($_GET['cfar_batch_increment']) || !is_numeric($_GET['cfar_batch_offset'])) {
-						echo cf_json_encode(array('result'=>false,'message'=>'Invalid quantity or offset'));
-						exit();
-					}
-					$increment = (int) $_GET['cfar_batch_increment'];
-					$offset = (int) $_GET['cfar_batch_offset'];
-					cfar_rebuild_archive_batch($increment,$offset);
-					die();
-					break;
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 jQuery(function() {
-		
+
 	jQuery('#cfar_settings_form2').submit(function(e){
 		jQuery('input[type=submit]', this).attr('disabled', 'disabled');
 		jQuery(this).attr("disabled", "disabled");
@@ -20,7 +20,7 @@ jQuery(function() {
 
 	// make a request
 	function cfar_batch_request(offset,increment) {
-		jQuery.getJSON('index.php',
+		jQuery.post('index.php',
 			{
 				cf_action: 'cfar_rebuild_archive_batch',
 				cfar_batch_offset: offset,
@@ -40,10 +40,10 @@ jQuery(function() {
 					next_offset = (offset + increment);
 					cfar_batch_request(next_offset, increment);
 				}
-			}
+			}, 'json'
 		);
 	}
-	
+
 	// handle the building of indexes
 	function cfar_index_build_callback(response) {
 		if (response.result) {
@@ -53,7 +53,7 @@ jQuery(function() {
 			cfar_update_status('Failed to rebuild archives');
 		}
 	}
-	
+
 	// update status message
 	function cfar_update_status(message) {
 		if (!jQuery('#index-status').hasClass('updated')) {
@@ -61,7 +61,7 @@ jQuery(function() {
 		}
 		jQuery('#index-status p').html(message);
 	}
-	
+
 	jQuery('.cfar-year-check').each(function() {
 		if (jQuery(this).is(':checked')) {
 			jQuery(this).parent().parent().siblings().each(function() {
@@ -74,14 +74,14 @@ jQuery(function() {
 function cfar_add_category() {
 	var id = new Date().valueOf();
 	var section = id.toString();
-	
+
 	var html = jQuery('#newitem_SECTION').html().replace(/###SECTION###/g, section);
 
 	jQuery('#cfar-categories').append(html);
 	jQuery('#cfar-item-'+section).attr('style','');
-	
+
 	jQuery('#archive_changes').show();
-	
+
 	cfar_year_remove_check(jQuery('#category_'+section+' .cfar-year-check'));
 }
 function cfar_remove_category(id) {

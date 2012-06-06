@@ -87,29 +87,31 @@ function cfar_request_handler() {
 						wp_redirect(trailingslashit($blogurl).'wp-admin/options-general.php?page=cf-archives.php&updated=true');
 						die();
 						break;
-					case 'cfar_ajax_month_archive':
-						$args = array();
-						$year = (int) $_POST['cfar_year'];
-						$month = (int) $_POST['cfar_month'];
-						$args['year_show'] = $wpdb->escape($_POST['cfar_year_show']);
-						$args['year_hide'] = $wpdb->escape($_POST['cfar_year_hide']);
-						$args['month_show'] = $wpdb->escape($_POST['cfar_month_show']);
-						$args['month_hide'] = $wpdb->escape($_POST['cfar_month_hide']);
-						$args['post_show'] = $wpdb->escape($_POST['cfar_post_show']);
-						$args['post_hide'] = $wpdb->escape($_POST['cfar_post_hide']);
-						$args['category'] = $wpdb->escape($_POST['cfar_category']);
-						$args['show_heads'] = $wpdb->escape($_POST['cfar_show_heads']);
-						$args['add_div'] = $wpdb->escape($_POST['cfar_add_div']);
-						$args['add_ul'] = $wpdb->escape($_POST['cfar_add_ul']);
-						$args['print_month_content'] = $wpdb->escape($_POST['cfar_print_month_content']);
-						cfar_month_archive($year,$month,$args);
-						die();
-						break;
 				}
 			}
 		}
-		else if (!empty($_GET['cf_action'])) {
+	}
+	else {
+		if (!empty($_GET['cf_action'])) {
 			switch ($_GET['cf_action']) {
+				case 'cfar_ajax_month_archive':
+					$args = array();
+					$year = (int) $_GET['cfar_year'];
+					$month = (int) $_GET['cfar_month'];
+					$args['year_show'] = $wpdb->escape($_GET['cfar_year_show']);
+					$args['year_hide'] = $wpdb->escape($_GET['cfar_year_hide']);
+					$args['month_show'] = $wpdb->escape($_GET['cfar_month_show']);
+					$args['month_hide'] = $wpdb->escape($_GET['cfar_month_hide']);
+					$args['post_show'] = $wpdb->escape($_GET['cfar_post_show']);
+					$args['post_hide'] = $wpdb->escape($_GET['cfar_post_hide']);
+					$args['category'] = $wpdb->escape($_GET['cfar_category']);
+					$args['show_heads'] = $wpdb->escape($_GET['cfar_show_heads']);
+					$args['add_div'] = $wpdb->escape($_GET['cfar_add_div']);
+					$args['add_ul'] = $wpdb->escape($_GET['cfar_add_ul']);
+					$args['print_month_content'] = $wpdb->escape($_GET['cfar_print_month_content']);
+					cfar_month_archive($year,$month,$args);
+					die();
+					break;
 			}
 		}
 	}
@@ -141,7 +143,6 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 	$year_list = get_option('cfar_year_list');
 	$year_list = is_array($year_list) ? $year_list : array();
 	$archives = array();
-	// TODO - solve issue with batches that cross months
 
 	$archived_posts_count = 0;
 	foreach ($posts_query->posts as $p) {

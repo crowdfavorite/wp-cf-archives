@@ -32,7 +32,7 @@ function showMonth(year,month) {
 	var ajaxSpinner = '<div id="ajax-spinner"><img src="' + cfar.wpserver + 'wp-content/plugins/cf-archives/images/ajax-loader.gif" border="0" /> <span class="ajax-loading">Loading...</span></div>';
 	if(!addContent.hasClass("filled")) {
 		addContent.append(ajaxSpinner);
-		jQuery.post(cfar.wpserver, { cf_action: 'cfar_ajax_month_archive', cfar_year: year, cfar_month: month, cfar_show_heads: 'no', cfar_add_div: 'no', cfar_add_ul: 'show', cfar_print_month_content: 'show', cfar_category: category, cfar_show_author: 'yes' },function(data){
+		jQuery.get(cfar.wpserver, { cf_action: 'cfar_ajax_month_archive', cfar_year: year, cfar_month: month, cfar_show_heads: 'no', cfar_add_div: 'no', cfar_add_ul: 'show', cfar_print_month_content: 'show', cfar_category: category, cfar_show_author: 'yes' },function(data){
 			jQuery('#ajax-spinner').remove();
 
 			data = jQuery(data);

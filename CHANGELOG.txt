@@ -1,5 +1,13 @@
 # CF Archives Changelog
 
+## 1.5
+
+- Moved assets to be served as static files
+- Optimization of batch rebuilding process
+- Added 'cfar_arch_' prefix to archive options
+- Added 'cfar_archive_post' filter
+- General optimizations and cleanup
+
 ## 1.4.6
 
 - Fixed bug that was causing the plugin to attempt to archive all posts but using a "finished" condition using a count with post_status and post_type restrictions.

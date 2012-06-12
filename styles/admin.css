@@ -1,0 +1,50 @@
+#ajax-spinner {
+	text-align:center;
+}
+.archive-category-year {
+	float:left;
+	clear:left;
+	line-height:25px;
+	width:100%;
+	display:inline;
+	border-bottom: 1px solid #DFDFDF;
+	border-left: 1px solid #DFDFDF;
+}
+.archive-month {
+	display:block;
+	float:left;
+	padding-left:2px;
+	width:7%;		
+}
+.archive-year {
+	display:block;
+	float:left;
+	padding-left:2px;
+	width:7%;
+}
+.archive-table {
+	-moz-border-radius: 0;
+	-khtml-border-radius: 0;
+	-webkit-border-radius: 0;
+	border-radius: 0;
+}
+.archive-table-top {
+	-moz-border-radius-bottomleft: 0;
+	-moz-border-radius-bottomright: 0;
+	-khtml-border-radius-bottomleft: 0;
+	-khtml-border-radius-bottomright: 0;
+	-webkit-border-bottom-left-radius: 0;
+	-webkit-border-bottom-right-radius: 0;
+	border-radius-bottomleft: 0;
+	border-radius-bottomright: 0;
+}
+.archive-table-bottom {
+	-moz-border-radius-topleft: 0;
+	-moz-border-radius-topright: 0;
+	-khtml-border-radius-topleft: 0;
+	-khtml-border-radius-topright: 0;
+	-webkit-border-top-left-radius: 0;
+	-webkit-border-top-right-radius: 0;
+	border-radius-topleft: 0;
+	border-radius-topright: 0;
+}

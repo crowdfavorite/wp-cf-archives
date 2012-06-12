@@ -1,0 +1,10 @@
+.month-show {
+	cursor:pointer;
+	font-size:10px;
+}
+.month-post-show {
+	cursor:pointer;
+}
+#ajax-spinner {
+	text-align: center;
+}

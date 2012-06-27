@@ -3,7 +3,7 @@
 Plugin Name: CF Archives
 Plugin URI: http://crowdfavorite.com
 Description: Advanced features for Archives.
-Version: 1.5
+Version: 1.5.1
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
@@ -91,28 +91,27 @@ function cfar_request_handler() {
 			}
 		}
 	}
-	else {
-		if (!empty($_GET['cf_action'])) {
-			switch ($_GET['cf_action']) {
-				case 'cfar_ajax_month_archive':
-					$args = array();
-					$year = (int) $_GET['cfar_year'];
-					$month = (int) $_GET['cfar_month'];
-					$args['year_show'] = $wpdb->escape($_GET['cfar_year_show']);
-					$args['year_hide'] = $wpdb->escape($_GET['cfar_year_hide']);
-					$args['month_show'] = $wpdb->escape($_GET['cfar_month_show']);
-					$args['month_hide'] = $wpdb->escape($_GET['cfar_month_hide']);
-					$args['post_show'] = $wpdb->escape($_GET['cfar_post_show']);
-					$args['post_hide'] = $wpdb->escape($_GET['cfar_post_hide']);
-					$args['category'] = $wpdb->escape($_GET['cfar_category']);
-					$args['show_heads'] = $wpdb->escape($_GET['cfar_show_heads']);
-					$args['add_div'] = $wpdb->escape($_GET['cfar_add_div']);
-					$args['add_ul'] = $wpdb->escape($_GET['cfar_add_ul']);
-					$args['print_month_content'] = $wpdb->escape($_GET['cfar_print_month_content']);
-					cfar_month_archive($year,$month,$args);
-					die();
-					break;
-			}
+	if (!empty($_GET['cf_action'])) {
+		switch ($_GET['cf_action']) {
+			case 'cfar_ajax_month_archive':
+				global $wpdb;
+				$args = array();
+				$year = (int) $_GET['cfar_year'];
+				$month = (int) $_GET['cfar_month'];
+				$args['year_show'] = $wpdb->escape($_GET['cfar_year_show']);
+				$args['year_hide'] = $wpdb->escape($_GET['cfar_year_hide']);
+				$args['month_show'] = $wpdb->escape($_GET['cfar_month_show']);
+				$args['month_hide'] = $wpdb->escape($_GET['cfar_month_hide']);
+				$args['post_show'] = $wpdb->escape($_GET['cfar_post_show']);
+				$args['post_hide'] = $wpdb->escape($_GET['cfar_post_hide']);
+				$args['category'] = $wpdb->escape($_GET['cfar_category']);
+				$args['show_heads'] = $wpdb->escape($_GET['cfar_show_heads']);
+				$args['add_div'] = $wpdb->escape($_GET['cfar_add_div']);
+				$args['add_ul'] = $wpdb->escape($_GET['cfar_add_ul']);
+				$args['print_month_content'] = $wpdb->escape($_GET['cfar_print_month_content']);
+				cfar_month_archive($year,$month,$args);
+				die();
+				break;
 		}
 	}
 }
@@ -155,7 +154,8 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			$archives[$archive_key] = get_option($archive_key);
 		}
 
-		update_post_meta($p->ID, '_cfar_publish_date', $full_date);
+		delete_post_meta($p->ID, '_cfar_publish_date');
+		add_post_meta($p->ID, '_cfar_publish_date', $full_date, true);
 
 		// Now that we have gathered relevant info, lets build an array for insertion
 		$p_key = $full_date.'--'.$p->ID;
@@ -174,6 +174,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		$insert = apply_filters('cfar_archive_post', $insert);
 
 		if ($archives[$archive_key] === false) {
+			add_option($archive_key, '', '', 'no');
 			$archives[$archive_key] = array();
 			$archives[$archive_key][$p_key] = $insert;
 		}

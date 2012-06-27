@@ -155,7 +155,8 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 			$archives[$archive_key] = get_option($archive_key);
 		}
 
-		update_post_meta($p->ID, '_cfar_publish_date', $full_date);
+		delete_post_meta($p->ID, '_cfar_publish_date');
+		add_post_meta($p->ID, '_cfar_publish_date', $full_date, true);
 
 		// Now that we have gathered relevant info, lets build an array for insertion
 		$p_key = $full_date.'--'.$p->ID;
@@ -174,6 +175,7 @@ function cfar_rebuild_archive_batch($increment=0,$offset=0) {
 		$insert = apply_filters('cfar_archive_post', $insert);
 
 		if ($archives[$archive_key] === false) {
+			add_option($archive_key, '', '', 'no');
 			$archives[$archive_key] = array();
 			$archives[$archive_key][$p_key] = $insert;
 		}

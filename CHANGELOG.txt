@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.5.1
+
+- Fixed Bug preventing new post from being included in the rebuild process
+
 ## 1.5
 
 - Moved assets to be served as static files

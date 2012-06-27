@@ -3,6 +3,8 @@
 ## 1.5.1
 
 - Fixed Bug preventing new post from being included in the rebuild process
+- Fixed Bug preventing admin users from properly using front-end ajax calls to
+archive records
 
 ## 1.5
 

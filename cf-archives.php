@@ -888,7 +888,6 @@ function cfar_save_settings($settings) {
 }
 
 function cfar_trim_excerpt($excerpt = '', $content = '',$length = 250) {
-	error_log(date("c")." >  "."cfar_trim_excerpt\n", 3, dirname(__FILE__).'/activity.log');
 	if (!empty($excerpt)) { return $excerpt; }
 	$content = str_replace(']]>', ']]&gt;', $content);
 	$content = preg_replace('/<img[^>]*>/','',$content);

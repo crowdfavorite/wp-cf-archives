@@ -36,7 +36,8 @@ function cfar_head_assets() {
 add_action('wp_enqueue_scripts', 'cfar_head_assets');
 
 function cfar_admin_assets() {
-	error_log(date("c")." >  "."cfar_admin_assets\n", 3, dirname(__FILE__).'/activity.log');
+	$current_user = wp_get_current_user();
+	error_log(date("c")." >  "."cfar settings accessed by $current_user->user_login \n", 3, dirname(__FILE__).'/activity.log');
 
 	$wpserver = get_bloginfo('url');
 	if(strpos($_SERVER['SERVER_NAME'],'www.') !== false && strpos($wpserver,'www.') === false) {

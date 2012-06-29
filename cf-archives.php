@@ -373,7 +373,7 @@ function cfar_publish_post($post_id) {
 add_action('publish_post', 'cfar_publish_post', 10, 1);
 
 function cfar_post_transition_status($new_status, $old_status, $post) {
-	error_log(date("c")." >  "."cfar_post_transition_status\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("c")." >  "."cfar_post_transition_status - FROM: $old_status - TO: $new_status\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	if ($old_status == 'publish' && $new_status != $old_status) {
 		// This is being "unpublished"

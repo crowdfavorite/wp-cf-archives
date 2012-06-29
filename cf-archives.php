@@ -36,7 +36,7 @@ function cfar_head_assets() {
 add_action('wp_enqueue_scripts', 'cfar_head_assets');
 
 function cfar_admin_assets() {
-	error_log("cfar_admin_assets\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_admin_assets\n", 3, dirname(__FILE__).'/activity.log');
 
 	$wpserver = get_bloginfo('url');
 	if(strpos($_SERVER['SERVER_NAME'],'www.') !== false && strpos($wpserver,'www.') === false) {
@@ -120,7 +120,7 @@ function cfar_request_handler() {
 add_action('wp_loaded', 'cfar_request_handler');
 
 function cfar_rebuild_archive_batch($increment=0,$offset=0) {
-	error_log("cfar_rebuild_archive_batch\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_rebuild_archive_batch\n", 3, dirname(__FILE__).'/activity.log');
 
 	global $wpdb;
 	if ($offset == 0) {
@@ -237,7 +237,7 @@ function cfar_get_posts_count() {
 }
 
 function cfar_add_archive($post) {
-	error_log("cfar_add_archive\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_add_archive\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 
 	// supply a filter to allow posts to be excluded from archiving passing the full post object
@@ -365,14 +365,14 @@ function cfar_add_archive($post) {
 }
 
 function cfar_publish_post($post_id) {
-	error_log("cfar_publish_post\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_publish_post\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post_id, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	cfar_add_archive(get_post($post_id));
 }
 add_action('publish_post', 'cfar_publish_post', 10, 1);
 
 function cfar_post_transition_status($new_status, $old_status, $post) {
-	error_log("cfar_post_transition_status\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_post_transition_status\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	if ($old_status == 'publish' && $new_status != $old_status) {
 		// This is being "unpublished"
@@ -382,7 +382,7 @@ function cfar_post_transition_status($new_status, $old_status, $post) {
 add_action('transition_post_status', 'cfar_post_transition_status', 10, 3);
 
 function cfar_remove_archive($post_id) {
-	error_log("cfar_remove_archive\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_remove_archive\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post_id, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	global $wpdb;
 
@@ -422,7 +422,7 @@ function cfar_remove_archive($post_id) {
 }
 
 function cfar_delete_post($post_id) {
-	error_log("cfar_delete_post\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_delete_post\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post_id, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	$post = get_post($post_id);
 	if (empty($post) || $post->post_status != 'publish') {
@@ -432,7 +432,7 @@ function cfar_delete_post($post_id) {
 add_action('delete_post', 'cfar_remove_archive');
 
 function cfar_remove_old_post_from_archive($post_id, $old_full_date) {
-	error_log("cfar_remove_old_post_from_archive\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_remove_old_post_from_archive\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($post_id, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	if (defined('CFAR_REBUILDING_ARCHIVE') && CFAR_REBUILDING_ARCHIVE) { return; }
 	$old_date = strtotime($old_full_date);
@@ -471,7 +471,7 @@ function cfar_remove_old_post_from_archive($post_id, $old_full_date) {
 }
 
 function cfar_setting($option) {
-	error_log("cfar_setting\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_setting\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($option, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	$value = get_option($option);
 	if (empty($value)) {
@@ -826,7 +826,7 @@ function cfar_settings_form() {
 }
 
 function cfar_save_settings($settings) {
-	error_log("cfar_save_settings\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_save_settings\n", 3, dirname(__FILE__).'/activity.log');
 	error_log(print_r($settings, 1)."\n", 3, dirname(__FILE__).'/activity.log');
 	if (!current_user_can('manage_options')) {
 		return;
@@ -888,7 +888,7 @@ function cfar_save_settings($settings) {
 }
 
 function cfar_trim_excerpt($excerpt = '', $content = '',$length = 250) {
-	error_log("cfar_trim_excerpt\n", 3, dirname(__FILE__).'/activity.log');
+	error_log(date("m-d-y g:i a")." >  "."cfar_trim_excerpt\n", 3, dirname(__FILE__).'/activity.log');
 	if (!empty($excerpt)) { return $excerpt; }
 	$content = str_replace(']]>', ']]&gt;', $content);
 	$content = preg_replace('/<img[^>]*>/','',$content);

@@ -1,5 +1,9 @@
 # CF Archives Changelog
 
+## 1.5.2
+
+- Fixed bug where if the "Show Year" settings was set to "yes", but there wasn't any content for that year, it was still showing the year.
+
 ## 1.5.1
 
 - Fixed Bug preventing new post from being included in the rebuild process

@@ -1143,7 +1143,8 @@ function cfar_get_year_archive($yearinput='',$args = null) {
 						}
 					}
 					if ($yearcount > 0) {
-						if (htmlspecialchars($settings['showyear']) == 'yes') {
+						// Show year if set to Yes AND we have something to show (i.e. $print)
+						if (htmlspecialchars($settings['showyear']) == 'yes' && !empty($print)) {
 							$return .= '<h2 class="yearhead" id="_'.$yearoutput.'">'.$yearoutput.'</h2>';
 							$return .= $print;
 						}

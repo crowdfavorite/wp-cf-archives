@@ -3,7 +3,7 @@
 Plugin Name: CF Archives
 Plugin URI: http://crowdfavorite.com
 Description: Advanced features for Archives.
-Version: 1.5.1
+Version: 1.5.2
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
